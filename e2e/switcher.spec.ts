@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test'
+import { join } from 'path'
 import { commit, initRepo, launch, tempDir, view } from './helpers'
 
 test('Ctrl+P finds a repository by name, group or path and switches to it or opens it', async () => {
-  const root = tempDir()
+  const root = join(tempDir(), 'repos')
   const alpha = initRepo(root, 'alpha-service')
   commit(alpha, 'a.txt', 'a\n', 'Alpha start')
   const billing = initRepo(root, 'billing-ui')
