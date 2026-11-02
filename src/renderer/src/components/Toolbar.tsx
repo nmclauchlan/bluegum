@@ -153,10 +153,6 @@ export function Toolbar({
         Search
       </button>
       <div className="spacer" />
-      <span className="muted">
-        {refs?.detached ? 'HEAD detached' : current ? `on ${current.name}` : ''}
-        {current?.upstream ? ` → ${current.upstream}` : ''}
-      </span>
       {toggle('details', 'commit panel', 'right')}
     </div>
   )

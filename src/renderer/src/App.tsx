@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CommitBuild, RepoInfo } from '@shared/types'
 import type { Shell } from './actions'
-import { ContextMenu, type MenuState } from './components/ContextMenu'
+import { ContextMenu, type MenuItem, type MenuState } from './components/ContextMenu'
 import { useDialogs } from './components/Dialog'
 import { TabBar } from './components/TabBar'
 import { SettingsDialog } from './components/SettingsDialog'
@@ -16,7 +16,7 @@ import { copyToClipboard, parentName, revealInFolder } from './util'
 import { BrandIcon } from './components/BrandIcon'
 import { RepoView } from './RepoView'
 import { errorMessage } from './util'
-import { applyTheme, currentTheme, setTheme, THEMES, useTheme } from './themes'
+import { applyTheme, currentTheme, setTheme, THEMES, useTheme, type Theme } from './themes'
 import { setPanelCollapsed, useCollapsedPanels } from './layout'
 import { collectCommands, type Command } from './commands'
 import { CommandPalette } from './components/CommandPalette'
@@ -65,6 +65,7 @@ export default function App(): React.JSX.Element {
   const [toast, setToast] = useState<ToastState | null>(null)
   const toastId = useRef(0)
   const [menu, setMenu] = useState<MenuState | null>(null)
+  const themeButton = useRef<HTMLButtonElement>(null)
   const dialogs = useDialogs()
   useKeyboardShell()
   const restored = useRef(false)
@@ -480,14 +481,14 @@ export default function App(): React.JSX.Element {
     return () => window.removeEventListener('arbor:version-menu', onMenu)
   }, [checkForUpdates, showInfo])
 
-  const themeMenu = (e: React.MouseEvent): void => {
-    shell.openMenu(
-      e,
-      THEMES.map((t) => ({
-        label: `${t.id === theme.id ? '✓ ' : '   '}${t.name}`,
-        onClick: () => setTheme(t.id)
-      }))
-    )
+  const themeItems = (): MenuItem[] => {
+    const item = (t: Theme): MenuItem => ({ label: t.name, checked: t.id === theme.id, onClick: () => setTheme(t.id) })
+    return [...THEMES.filter((t) => t.dark).map(item), { separator: true }, ...THEMES.filter((t) => !t.dark).map(item)]
+  }
+  const themeMenu = (e: React.MouseEvent): void => shell.openMenu(e, themeItems())
+  const openThemeMenu = (): void => {
+    const r = themeButton.current?.getBoundingClientRect()
+    setMenu({ x: r?.left ?? window.innerWidth, y: (r?.bottom ?? 36) + 2, items: themeItems() })
   }
 
   const createGroup = (name: string, paths: string[]): void => {
@@ -729,7 +730,7 @@ export default function App(): React.JSX.Element {
         { label: 'Branch panel', checked: !collapsedPanels.includes('sidebar'), onSelect: () => setPanelCollapsed('sidebar', !collapsedPanels.includes('sidebar')) },
         { label: 'Commit panel', checked: !collapsedPanels.includes('details'), onSelect: () => setPanelCollapsed('details', !collapsedPanels.includes('details')) },
         { separator: true },
-        ...THEMES.map((t) => ({ label: t.name, checked: t.id === theme.id, onSelect: () => setTheme(t.id) })),
+        { label: 'Theme…', onSelect: openThemeMenu },
         { separator: true },
         { label: 'Zoom in', shortcut: `${mod}=`, onSelect: () => void zoom('zoomIn') },
         { label: 'Zoom out', shortcut: `${mod}-`, onSelect: () => void zoom('zoomOut') },
@@ -759,12 +760,12 @@ export default function App(): React.JSX.Element {
     ...menus.flatMap((m) =>
       m.items.flatMap((item): Command[] => {
         if ('separator' in item || item.disabled || PALETTE_SKIP.has(item.label)) return []
-        const theme = m.label === 'View' && THEMES.some((t) => t.name === item.label)
         const panel = item.checked !== undefined && / panel$/.test(item.label)
-        const title = theme ? `Theme: ${item.label}` : panel ? `${item.checked ? 'Hide' : 'Show'} ${item.label.toLowerCase()}` : item.label
+        const title = panel ? `${item.checked ? 'Hide' : 'Show'} ${item.label.toLowerCase()}` : item.label
         return [{ id: `menu:${m.label}:${item.label}`, group: m.label, title, shortcut: item.shortcut, run: item.onSelect }]
       })
-    )
+    ),
+    ...THEMES.map((t) => ({ id: `theme:${t.id}`, group: 'View', title: `Theme: ${t.name}`, run: () => setTheme(t.id) }))
   ]
 
   const ungroup = (id: string): void => {
@@ -838,7 +839,7 @@ export default function App(): React.JSX.Element {
           }}
         />
         <div className="titlebar-spacer" />
-        <button className="icon titlebar-btn" title={`Theme: ${theme.name}`} onClick={themeMenu}>
+        <button ref={themeButton} className="icon titlebar-btn" title={`Theme: ${theme.name}`} aria-label={`Theme: ${theme.name}`} onClick={themeMenu}>
           <Icon name="theme" size={14} />
           {theme.name}
         </button>

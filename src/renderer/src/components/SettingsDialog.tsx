@@ -171,10 +171,14 @@ export function SettingsDialog({ onClose, suggestBaseUrl }: { onClose: () => voi
           <label className="settings-row">
             <span>Theme</span>
             <select value={theme.id} onChange={(e) => setTheme(e.target.value)}>
-              {THEMES.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}{t.dark ? '' : ' (light)'}
-                </option>
+              {[true, false].map((dark) => (
+                <optgroup key={String(dark)} label={dark ? 'Dark' : 'Light'}>
+                  {THEMES.filter((t) => t.dark === dark).map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </label>
