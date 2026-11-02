@@ -374,7 +374,7 @@ export function TabBar({
       const g = t.group ? groupById.get(t.group) : undefined
       if (g && !seen.has(g.id)) {
         seen.add(g.id)
-        menu.push({ label: `— ${g.name} —`, disabled: true })
+        menu.push({ separator: true }, { label: g.name, disabled: true })
       }
       menu.push({ label: `${t.path === activePath ? '✓ ' : '   '}${t.name}`, onClick: () => onSelect(t.path) })
     }

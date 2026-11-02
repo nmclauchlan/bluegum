@@ -79,7 +79,7 @@ export function UpdateNotice(): React.JSX.Element | null {
           title="Restart Blue Gum to install the update"
           onClick={() => window.updater.install()}
         >
-          <span className="dot" /> Blue Gum {status.version} is ready — restart to update
+          <span className="dot" /> Blue Gum {status.version} is ready. Restart to update
         </span>
       )
     case 'error':
