@@ -13,8 +13,8 @@ interface Entry {
   hint?: string
 }
 
-const WIP_KEY = 'arbor.home.wip'
-const COLLAPSE_KEY = 'arbor.home.collapsed'
+const WIP_KEY = 'bluegum.home.wip'
+const COLLAPSE_KEY = 'bluegum.home.collapsed'
 
 function load<T>(key: string, fallback: T): T {
   try {

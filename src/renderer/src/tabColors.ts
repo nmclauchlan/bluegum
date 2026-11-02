@@ -4,7 +4,7 @@ export interface GroupColorPalette {
   source: string
 }
 
-// Palette names are Arbor labels; colors retain their order on Color Hunt.
+// Palette names are Blue Gum labels; colors retain their order on Color Hunt.
 export const GROUP_COLOR_PALETTES: readonly GroupColorPalette[] = [
   {
     name: 'Coastal Haze',

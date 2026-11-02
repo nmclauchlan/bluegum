@@ -77,10 +77,10 @@ export default function App(): React.JSX.Element {
   const [notifOpen, setNotifOpen] = useState<Set<string> | null>(null)
   const [pullingRepo, setPullingRepo] = useState<string | null>(null)
   const [focus, setFocus] = useState<{ path: string; hash: string; n: number } | null>(null)
-  const [seen, setSeen] = useState(() => loadShaMap('arbor.seenIncoming'))
-  const [baselines] = useState(() => ({ current: loadShaMap('arbor.incomingBaselines') }))
+  const [seen, setSeen] = useState(() => loadShaMap('bluegum.seenIncoming'))
+  const [baselines] = useState(() => ({ current: loadShaMap('bluegum.incomingBaselines') }))
   const [clearUndo, setClearUndo] = useState<ClearUndo>(NO_UNDO)
-  const [dismissedBuilds, setDismissedBuilds] = useState(() => loadShaMap('arbor.dismissedBuilds'))
+  const [dismissedBuilds, setDismissedBuilds] = useState(() => loadShaMap('bluegum.dismissedBuilds'))
   const tabsRef = useRef<{ path: string; name: string }[]>([])
   const checkingRef = useRef(false)
   const theme = useTheme()
@@ -95,7 +95,7 @@ export default function App(): React.JSX.Element {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [favorites, setFavorites] = useState<{ path: string; name: string }[]>(() => {
     try {
-      return JSON.parse(localStorage.getItem('arbor.favorites') ?? '[]')
+      return JSON.parse(localStorage.getItem('bluegum.favorites') ?? '[]')
     } catch {
       return []
     }
@@ -177,7 +177,7 @@ export default function App(): React.JSX.Element {
     (changes: Record<string, string>) => {
       if (!Object.keys(changes).length) return
       baselines.current = { ...baselines.current, ...changes }
-      saveShaMap('arbor.incomingBaselines', baselines.current)
+      saveShaMap('bluegum.incomingBaselines', baselines.current)
     },
     [baselines]
   )
@@ -261,8 +261,8 @@ export default function App(): React.JSX.Element {
       const tab = tabsRef.current.find((t) => t.path === path)
       if (tab) void refreshIncoming(tab.path, tab.name)
     }
-    window.addEventListener('arbor:synced', onSynced)
-    return () => window.removeEventListener('arbor:synced', onSynced)
+    window.addEventListener('bluegum:synced', onSynced)
+    return () => window.removeEventListener('bluegum:synced', onSynced)
   }, [refreshIncoming])
 
   const openPaths = new Set(tabs.map((t) => t.path))
@@ -309,7 +309,7 @@ export default function App(): React.JSX.Element {
       for (const f of r.failedBuilds) next[`build::${failedBuildKey(r.path, f)}`] = f.sha
     }
     setSeen(next)
-    saveShaMap('arbor.seenIncoming', next)
+    saveShaMap('bluegum.seenIncoming', next)
   }
 
   const clearIncoming = (path: string | null, upstream: string | null): void => {
@@ -337,7 +337,7 @@ export default function App(): React.JSX.Element {
 
   const updateDismissedBuilds = (next: Record<string, string>): void => {
     setDismissedBuilds(next)
-    saveShaMap('arbor.dismissedBuilds', next)
+    saveShaMap('bluegum.dismissedBuilds', next)
   }
 
   const clearBuilds = (keys: string[]): void => {
@@ -446,8 +446,8 @@ export default function App(): React.JSX.Element {
   const checkForUpdates = useCallback(async () => {
     showInfo('Checking for updates…')
     const [outcome, version] = await Promise.all([window.updater.check(), window.native?.version() ?? Promise.resolve('')])
-    if (outcome === 'current') showInfo(`Arbor ${version} is the latest version`)
-    else if (outcome === 'unavailable') showInfo('Updates are only checked in installed builds of Arbor')
+    if (outcome === 'current') showInfo(`Blue Gum ${version} is the latest version`)
+    else if (outcome === 'unavailable') showInfo('Updates are only checked in installed builds of Blue Gum')
     else if (outcome === 'error') showError("Couldn't check for updates. Try again later.")
   }, [showInfo, showError])
 
@@ -462,7 +462,7 @@ export default function App(): React.JSX.Element {
           above: true,
           items: [
             status.state === 'downloaded'
-              ? { label: `Restart to install Arbor ${status.version}`, onClick: () => void window.updater.install() }
+              ? { label: `Restart to install Blue Gum ${status.version}`, onClick: () => void window.updater.install() }
               : { label: busy ? 'Checking for updates…' : 'Check for updates', disabled: busy, onClick: () => void checkForUpdates() },
             { separator: true },
             { label: 'Release notes', onClick: () => window.open(`https://github.com/nmclauchlan/arbor/releases/tag/v${version}`) },
@@ -477,8 +477,8 @@ export default function App(): React.JSX.Element {
         })
       })
     }
-    window.addEventListener('arbor:version-menu', onMenu)
-    return () => window.removeEventListener('arbor:version-menu', onMenu)
+    window.addEventListener('bluegum:version-menu', onMenu)
+    return () => window.removeEventListener('bluegum:version-menu', onMenu)
   }, [checkForUpdates, showInfo])
 
   const themeItems = (): MenuItem[] => {
@@ -547,7 +547,7 @@ export default function App(): React.JSX.Element {
         } finally {
           done++
           onProgress?.(done, total)
-          window.dispatchEvent(new CustomEvent('arbor:synced', { detail: t.path }))
+          window.dispatchEvent(new CustomEvent('bluegum:synced', { detail: t.path }))
         }
       }
     }
@@ -594,7 +594,7 @@ export default function App(): React.JSX.Element {
         } catch (e) {
           failed.push(`${nameOf(p)}: ${errorMessage(e).split('\n').find((l) => l.trim()) ?? ''}`)
         }
-        window.dispatchEvent(new CustomEvent('arbor:synced', { detail: p }))
+        window.dispatchEvent(new CustomEvent('bluegum:synced', { detail: p }))
       }
     }
     await Promise.all(Array.from({ length: Math.min(4, paths.length) }, worker))
@@ -628,7 +628,7 @@ export default function App(): React.JSX.Element {
     setFavorites((list) => {
       const next = list.some((x) => x.path === entry.path) ? list.filter((x) => x.path !== entry.path) : [...list, { path: entry.path, name: entry.name }]
       try {
-        localStorage.setItem('arbor.favorites', JSON.stringify(next))
+        localStorage.setItem('bluegum.favorites', JSON.stringify(next))
       } catch {
         /* storage unavailable */
       }
@@ -750,7 +750,7 @@ export default function App(): React.JSX.Element {
         { label: 'Report an issue', onSelect: () => window.open('https://github.com/nmclauchlan/arbor/issues/new') },
         { separator: true },
         { label: 'Check for updates', onSelect: () => void checkForUpdates() },
-        { label: 'About Arbor', onSelect: () => setInfoDialog('about') }
+        { label: 'About Blue Gum', onSelect: () => setInfoDialog('about') }
       ]
     }
   ]
@@ -776,9 +776,9 @@ export default function App(): React.JSX.Element {
   return (
     <div className="app">
       <div className="menubar-row">
-        <div className="brand-lockup" title="Arbor">
+        <div className="brand-lockup" title="Blue Gum">
           <BrandIcon size={18} />
-          <strong>Arbor</strong>
+          <strong>Blue Gum</strong>
         </div>
         <MenuBar menus={menus} />
         <div className="menubar-drag" />

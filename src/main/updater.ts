@@ -20,7 +20,7 @@ export function setupUpdater(): void {
     if (status.state === 'downloaded') autoUpdater.quitAndInstall()
   })
 
-  const fake = process.env['ARBOR_FAKE_UPDATE']
+  const fake = process.env['BLUEGUM_FAKE_UPDATE']
   if (fake) {
     const state = fake as UpdateStatus['state']
     broadcast({ state, version: '9.9.9', percent: state === 'downloading' ? 42 : undefined })

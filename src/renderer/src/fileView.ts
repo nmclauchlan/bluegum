@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react'
 
 export type FileView = 'tree' | 'flat'
 
-const KEY = 'arbor.fileView'
+const KEY = 'bluegum.fileView'
 
 function load(): FileView {
   try {

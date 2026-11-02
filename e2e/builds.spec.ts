@@ -35,7 +35,7 @@ async function connect(app: ElectronApplication, page: Page, kind: string, baseU
     ([k, u]) => (window as unknown as { host: { addAccount(k: string, u: string, t: string): Promise<unknown> } }).host.addAccount(k, u, 'test-token'),
     [kind, baseUrl]
   )
-  await page.evaluate(() => localStorage.setItem('arbor.settings', JSON.stringify({ backgroundFetch: 0 })))
+  await page.evaluate(() => localStorage.setItem('bluegum.settings', JSON.stringify({ backgroundFetch: 0 })))
   await page.reload()
   await expect(view(page).locator('.commit-row').first()).toBeVisible()
 }

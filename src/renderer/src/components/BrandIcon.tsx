@@ -10,7 +10,7 @@ export function BrandIcon({
 }): React.JSX.Element {
   const id = useId()
   // Share the native icon's source, with unique gradient IDs for each inline instance.
-  const markup = useMemo(() => iconSvg.replaceAll('arbor-', `arbor-${id}-`), [id])
+  const markup = useMemo(() => iconSvg.replaceAll('bluegum-', `bluegum-${id}-`), [id])
 
   return (
     <span

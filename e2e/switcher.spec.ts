@@ -18,7 +18,7 @@ test('Ctrl+P finds a repository by name, group or path and switches to it or ope
       tabs: [{ path: alpha.replace(/\\/g, '/'), group: 'g1' }, { path: billing.replace(/\\/g, '/') }],
       groups: [{ id: 'g1', name: 'Platform', color: '#4f8cff' }]
     }
-    await page.evaluate((value) => localStorage.setItem('arbor.tabs', value), JSON.stringify(saved))
+    await page.evaluate((value) => localStorage.setItem('bluegum.tabs', value), JSON.stringify(saved))
     await page.reload()
     await expect(view(page).locator('.commit-row', { hasText: 'Alpha start' })).toBeVisible()
 

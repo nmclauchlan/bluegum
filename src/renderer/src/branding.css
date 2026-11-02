@@ -13,7 +13,7 @@
   justify-content: flex-start;
   overflow: auto;
   padding: 36px 24px;
-  background: radial-gradient(ellipse at 50% 34%, color-mix(in srgb, var(--green) 5%, transparent), transparent 56%);
+  background: radial-gradient(ellipse at 50% 34%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 56%);
 }
 
 .welcome-content {

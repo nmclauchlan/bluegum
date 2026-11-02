@@ -49,7 +49,11 @@ export function findToken(kind: HostKind, baseUrl: string): string | null {
   const acc = load().find((a) => a.kind === kind && a.baseUrl === normalise(baseUrl))
   if (!acc) return null
   if (!acc.encrypted) return acc.token
-  return safeStorage.decryptString(Buffer.from(acc.token, 'base64'))
+  try {
+    return safeStorage.decryptString(Buffer.from(acc.token, 'base64'))
+  } catch {
+    return null
+  }
 }
 
 export function storeAccount(kind: HostKind, baseUrl: string, user: string, token: string): HostAccount {

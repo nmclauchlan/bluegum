@@ -67,8 +67,8 @@ test('the menu bar opens About, shortcuts and zoom', async () => {
   try {
     const menubar = page.getByRole('menubar', { name: 'Application menu' })
     await menubar.getByRole('menuitem', { name: 'Help' }).click()
-    await page.getByRole('menu', { name: 'Help' }).getByRole('menuitem', { name: 'About Arbor' }).click()
-    const about = page.getByRole('dialog', { name: 'About Arbor' })
+    await page.getByRole('menu', { name: 'Help' }).getByRole('menuitem', { name: 'About Blue Gum' }).click()
+    const about = page.getByRole('dialog', { name: 'About Blue Gum' })
     await expect(about).toContainText(version)
     await page.keyboard.press('Escape')
     await expect(about).toBeHidden()

@@ -15,7 +15,7 @@ const remove = (dir: string): void => {
 export default function globalSetup(): () => void {
   const base = tmpdir()
   for (const name of readdirSync(base)) {
-    if (!/^arbor-(e2e|profile|rebase)-/.test(name)) continue
+    if (!/^(arbor|bluegum)-(e2e|profile|rebase)-/.test(name)) continue
     const dir = join(base, name)
     try {
       if (Date.now() - statSync(dir).mtimeMs > STALE_MS) remove(dir)
@@ -23,7 +23,7 @@ export default function globalSetup(): () => void {
       continue
     }
   }
-  const root = mkdtempSync(join(base, 'arbor-e2e-'))
-  process.env.ARBOR_E2E_TMP = root
+  const root = mkdtempSync(join(base, 'bluegum-e2e-'))
+  process.env.BLUEGUM_E2E_TMP = root
   return () => remove(root)
 }

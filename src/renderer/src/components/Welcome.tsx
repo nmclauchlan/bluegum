@@ -20,7 +20,7 @@ export function Welcome({
       <div className="welcome-content">
         <div className="welcome-brand">
           <BrandIcon size={112} animated />
-          <h1 className="welcome-heading">Arbor</h1>
+          <h1 className="welcome-heading">Blue Gum</h1>
           <p className="welcome-tagline">A clearer view of every branch.</p>
         </div>
         <div className="welcome-actions">

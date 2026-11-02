@@ -5,7 +5,7 @@ export interface DiffPrefs {
   wrap: boolean
 }
 
-const KEY = 'arbor.diff'
+const KEY = 'bluegum.diff'
 
 function load(): DiffPrefs {
   try {

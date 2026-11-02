@@ -21,7 +21,7 @@ test('pull with rebase from the Pull menu, and the fast-forward-only setting exp
   git(other, 'push', '-q', 'origin', 'main')
   const { page, close } = await launch(repo)
   try {
-    await page.evaluate(() => localStorage.setItem('arbor.settings', JSON.stringify({ backgroundFetch: 0, pullMode: 'ff-only' })))
+    await page.evaluate(() => localStorage.setItem('bluegum.settings', JSON.stringify({ backgroundFetch: 0, pullMode: 'ff-only' })))
     await page.reload()
     const v = view(page)
     await expect(v.locator('.commit-row').first()).toBeVisible()

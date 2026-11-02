@@ -14,7 +14,7 @@ test('repositories open as tabs and can be filed into a new group', async () => 
   const b = repoWithRemote(root, 'beta').repo
   const { page, close } = await launch()
   try {
-    await page.evaluate((value) => localStorage.setItem('arbor.tabs', value), seed([a, b]))
+    await page.evaluate((value) => localStorage.setItem('bluegum.tabs', value), seed([a, b]))
     await page.reload()
     const tabs = page.locator('.tabs .tab:not(.tab-add):not(.tab-overflow) .tab-name')
     await expect(tabs).toHaveText(['alpha', 'beta'])
@@ -49,7 +49,7 @@ test('pull all fast-forwards every repository in a group and reports the outcome
   try {
     const group = { id: 'g1', name: 'Services', color: '#3e9cf0' }
     await page.evaluate(
-      (value) => localStorage.setItem('arbor.tabs', value),
+      (value) => localStorage.setItem('bluegum.tabs', value),
       seed([one.repo, two.repo], [group], { [one.repo]: 'g1', [two.repo]: 'g1' })
     )
     await page.reload()

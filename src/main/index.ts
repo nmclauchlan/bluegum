@@ -1,5 +1,6 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, shell } from 'electron'
 import { join } from 'path'
+import { existsSync, renameSync } from 'fs'
 import { readFile, writeFile, mkdir, stat } from 'fs/promises'
 import * as gitService from './git'
 import { setupUpdater } from './updater'
@@ -9,8 +10,24 @@ import { hostApi } from './hosts'
 import type { MainSettings } from '@shared/types'
 import type { GitApi, RepoInfo } from '@shared/types'
 
-if (process.env['ARBOR_USER_DATA']) app.setPath('userData', process.env['ARBOR_USER_DATA'])
-else if (!app.isPackaged) app.setPath('userData', join(app.getPath('appData'), 'Arbor Dev'))
+if (process.env['BLUEGUM_USER_DATA']) app.setPath('userData', process.env['BLUEGUM_USER_DATA'])
+else {
+  const appData = process.env['BLUEGUM_APP_DATA'] ?? app.getPath('appData')
+  const suffix = app.isPackaged ? '' : ' Dev'
+  app.setPath('userData', join(appData, `${app.getName()}${suffix}`))
+  adoptLegacyUserData(join(appData, `Arbor${suffix}`))
+}
+
+// Must run before anything opens the profile, including the single-instance lock.
+function adoptLegacyUserData(legacy: string): void {
+  const current = app.getPath('userData')
+  if (existsSync(current) || !existsSync(legacy)) return
+  try {
+    renameSync(legacy, current)
+  } catch {
+    app.setPath('userData', legacy)
+  }
+}
 
 const isPrimary = app.requestSingleInstanceLock()
 if (!isPrimary) app.quit()
@@ -69,14 +86,14 @@ function createWindow(): void {
     }
   })
   win.on('ready-to-show', () => win.show())
-  const shot = process.env['ARBOR_SCREENSHOT']
+  const shot = process.env['BLUEGUM_SCREENSHOT']
   if (shot) {
     win.webContents.on('console-message', (event) => {
       console.log(`[renderer:${event.level}] ${event.message}`)
     })
     win.webContents.once('did-finish-load', () => {
       setTimeout(async () => {
-        const script = process.env['ARBOR_SCREENSHOT_SCRIPT']
+        const script = process.env['BLUEGUM_SCREENSHOT_SCRIPT']
         if (script) {
           await win.webContents.executeJavaScript(script).catch((e) => console.error('screenshot script failed', e))
           await new Promise((r) => setTimeout(r, 5000))
@@ -85,7 +102,7 @@ function createWindow(): void {
         win.webContents.session.flushStorageData()
         await writeFile(shot, image.toPNG())
         app.quit()
-      }, Number(process.env['ARBOR_SCREENSHOT_DELAY'] ?? 3000))
+      }, Number(process.env['BLUEGUM_SCREENSHOT_DELAY'] ?? 3000))
     })
   }
   win.webContents.setWindowOpenHandler(({ url }) => {

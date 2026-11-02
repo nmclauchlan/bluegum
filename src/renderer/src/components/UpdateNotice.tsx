@@ -38,10 +38,10 @@ export function AppVersion(): React.JSX.Element | null {
   const open = (e: React.MouseEvent): void => {
     e.preventDefault()
     const rect = e.currentTarget.getBoundingClientRect()
-    window.dispatchEvent(new CustomEvent('arbor:version-menu', { detail: { x: rect.left, y: rect.top } }))
+    window.dispatchEvent(new CustomEvent('bluegum:version-menu', { detail: { x: rect.left, y: rect.top } }))
   }
   return (
-    <button className="app-version" title={`Arbor ${text}. Right-click to check for updates`} onClick={open} onContextMenu={open}>
+    <button className="app-version" title={`Blue Gum ${text}. Right-click to check for updates`} onClick={open} onContextMenu={open}>
       v{text}
     </button>
   )
@@ -62,7 +62,7 @@ export function UpdateNotice(): React.JSX.Element | null {
       )
     case 'downloading':
       return (
-        <span className="update-notice" title={`Downloading Arbor ${status.version ?? ''}`}>
+        <span className="update-notice" title={`Downloading Blue Gum ${status.version ?? ''}`}>
           <span className="dot" /> Downloading update
           <span className="bar" role="progressbar" aria-label="Downloading update" aria-valuemin={0} aria-valuemax={100} aria-valuenow={status.percent ?? 0}>
             <div style={{ width: `${status.percent ?? 0}%` }} />
@@ -76,10 +76,10 @@ export function UpdateNotice(): React.JSX.Element | null {
           className="update-notice clickable"
           role="button"
           tabIndex={0}
-          title="Restart Arbor to install the update"
+          title="Restart Blue Gum to install the update"
           onClick={() => window.updater.install()}
         >
-          <span className="dot" /> Arbor {status.version} is ready — restart to update
+          <span className="dot" /> Blue Gum {status.version} is ready — restart to update
         </span>
       )
     case 'error':

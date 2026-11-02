@@ -20,7 +20,7 @@ export const LIMITS = {
   colSha: { min: 50, max: 200 }
 } as const
 
-const KEY = 'arbor.layout'
+const KEY = 'bluegum.layout'
 export const LAYOUT_DEFAULTS: Layout = { sidebar: 250, panel: 440, colRefs: 0, colGraph: 0, colAuthor: 110, colDate: 90, colSha: 64 }
 
 function load(): Layout {
@@ -140,12 +140,12 @@ function flagStore(key: string): { set(flag: string, on: boolean): void; reset()
   }
 }
 
-const hiddenColumns = flagStore('arbor.columns.hidden')
+const hiddenColumns = flagStore('bluegum.columns.hidden')
 export const setColumnHidden = (col: string, hide: boolean): void => hiddenColumns.set(col, hide)
 export const resetColumns = (): void => hiddenColumns.reset()
 export const useHiddenColumns = (): string[] => hiddenColumns.use()
 
 export type PanelName = 'sidebar' | 'details'
-const collapsedPanels = flagStore('arbor.panels.collapsed')
+const collapsedPanels = flagStore('bluegum.panels.collapsed')
 export const setPanelCollapsed = (panel: PanelName, collapsed: boolean): void => collapsedPanels.set(panel, collapsed)
 export const useCollapsedPanels = (): string[] => collapsedPanels.use()

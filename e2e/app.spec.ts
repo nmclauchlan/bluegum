@@ -4,7 +4,7 @@ import { commit, initRepo, launch, tempDir, view } from './helpers'
 test('shows the welcome screen when no repository is open', async () => {
   const { page, close } = await launch()
   try {
-    await expect(page.locator('.welcome-heading')).toHaveText('Arbor')
+    await expect(page.locator('.welcome-heading')).toHaveText('Blue Gum')
     await expect(page.getByRole('button', { name: /Open repository/ })).toBeVisible()
     await expect(page.getByRole('button', { name: /Clone repository/ })).toBeVisible()
   } finally {
@@ -39,9 +39,9 @@ test('themes are grouped into dark and light, and can be picked from the View me
     const menu = page.locator('.context-menu-root > .context-menu')
     const labels = await menu.locator(':scope > .item .label').allInnerTexts()
     expect(labels).toHaveLength(23)
-    expect(labels.indexOf('High Contrast Dark')).toBeLessThan(labels.indexOf('Arbor Light'))
+    expect(labels.indexOf('High Contrast Dark')).toBeLessThan(labels.indexOf('Blue Gum Light'))
     await expect(menu.locator(':scope > .sep')).toHaveCount(1)
-    await expect(menu.locator(':scope > [aria-checked="true"]')).toHaveText('Arbor Dark')
+    await expect(menu.locator(':scope > [aria-checked="true"]')).toHaveText('Blue Gum Dark')
     await menu.locator(':scope > .item', { hasText: 'Tokyo Night' }).click()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'tokyo-night')
 

@@ -19,11 +19,11 @@ export function AboutDialog({ onClose }: { onClose: () => void }): React.JSX.Ele
   useEscape(onClose)
   return (
     <div className="overlay" onMouseDown={onClose}>
-      <div className="dialog about-dialog" role="dialog" aria-label="About Arbor" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="dialog about-dialog" role="dialog" aria-label="About Blue Gum" onMouseDown={(e) => e.stopPropagation()}>
         <div className="about-brand">
           <BrandIcon size={64} />
           <div>
-            <h3>Arbor</h3>
+            <h3>Blue Gum</h3>
             <p className="muted">A clearer view of every branch.</p>
           </div>
         </div>

@@ -281,7 +281,7 @@ export async function unstage(path: string, files: string[]): Promise<void> {
 }
 
 export async function applyPatch(path: string, patch: string, mode: 'stage' | 'unstage' | 'discard'): Promise<void> {
-  const file = join(tmpdir(), `arbor-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.patch`)
+  const file = join(tmpdir(), `bluegum-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.patch`)
   await writeFile(file, patch)
   const args = ['apply', '--recount', '--whitespace=nowarn']
   if (mode !== 'discard') args.push('--cached')
@@ -867,7 +867,7 @@ export async function interactiveRebase(path: string, base: string, steps: Rebas
   if (kept[0].action === 'squash' || kept[0].action === 'fixup') throw new Error('The first commit has nothing to fold into')
   if (steps.some((s) => !/^[0-9a-f]{40}$/i.test(s.hash))) throw new Error('Unknown commit in the rebase plan')
   const g = git(path)
-  const dir = await mkdtemp(join(tmpdir(), 'arbor-rebase-'))
+  const dir = await mkdtemp(join(tmpdir(), 'bluegum-rebase-'))
   const slash = (p: string): string => p.replace(/\\/g, '/')
   const messageOf = async (hash: string): Promise<string> => (await g.raw(['log', '-1', '--format=%B', hash])).replace(/\s+$/, '')
   const todo: string[] = []

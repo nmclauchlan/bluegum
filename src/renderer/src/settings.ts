@@ -36,7 +36,7 @@ export const PULL_LABELS: Record<PullMode, string> = {
 
 const PULL_MODES = Object.keys(PULL_LABELS) as PullMode[]
 
-const KEY = 'arbor.settings'
+const KEY = 'bluegum.settings'
 
 function load(): Settings {
   try {

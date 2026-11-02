@@ -13,8 +13,8 @@ export interface TabGroup {
   collapsed?: boolean
 }
 
-const KEY = 'arbor.tabs'
-const ACTIVE_KEY = 'arbor.active'
+const KEY = 'bluegum.tabs'
+const ACTIVE_KEY = 'bluegum.active'
 
 export interface SavedTabs {
   tabs: Tab[]

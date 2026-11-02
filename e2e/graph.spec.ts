@@ -43,7 +43,7 @@ test('graph columns resize by dragging the header handle', async () => {
   const { repo } = repoWithRemote(root)
   const { page, close } = await launch(repo)
   try {
-    await page.evaluate(() => localStorage.setItem('arbor.layout', JSON.stringify({ sidebar: 160, panel: 300 })))
+    await page.evaluate(() => localStorage.setItem('bluegum.layout', JSON.stringify({ sidebar: 160, panel: 300 })))
     await page.reload()
     await expect(view(page).locator('.commit-row').first()).toBeVisible()
     const author = view(page).locator('.commit-header .hcell').nth(3)
@@ -68,8 +68,8 @@ test('the checked-out branch badge uses dark text on light theme accents and whi
   const { page, close } = await launch(repo)
   try {
     const badge = view(page).locator('.ref-badge.branch.head').first()
-    for (const [theme, colour] of [['monokai', 'rgb(39, 40, 34)'], ['nord', 'rgb(46, 52, 64)'], ['arbor-dark', 'rgb(255, 255, 255)']]) {
-      await page.evaluate((id) => localStorage.setItem('arbor.theme', id), theme)
+    for (const [theme, colour] of [['monokai', 'rgb(39, 40, 34)'], ['nord', 'rgb(46, 52, 64)'], ['bluegum-dark', 'rgb(255, 255, 255)']]) {
+      await page.evaluate((id) => localStorage.setItem('bluegum.theme', id), theme)
       await page.reload()
       await expect(badge, theme).toHaveCSS('color', colour)
     }

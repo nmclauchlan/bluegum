@@ -194,8 +194,8 @@ export function RepoView({
   useEffect(() => {
     if (!active) return
     const onSettings = (): void => void refreshPrs()
-    window.addEventListener('arbor:accounts-changed', onSettings)
-    return () => window.removeEventListener('arbor:accounts-changed', onSettings)
+    window.addEventListener('bluegum:accounts-changed', onSettings)
+    return () => window.removeEventListener('bluegum:accounts-changed', onSettings)
   }, [active, refreshPrs])
 
   useEffect(() => {
@@ -408,7 +408,7 @@ export function RepoView({
         if (/Push|Fetch|Pull/.test(label)) {
           void refreshPrs()
           void refreshBuilds()
-          window.dispatchEvent(new CustomEvent('arbor:synced', { detail: path }))
+          window.dispatchEvent(new CustomEvent('bluegum:synced', { detail: path }))
         }
       }
     },
@@ -416,7 +416,7 @@ export function RepoView({
   )
 
   const forcePushWarning = (branch: string): string =>
-    `Force pushing replaces the remote copy of ${branch} with yours. Arbor uses --force-with-lease, so it refuses if someone else has pushed there since you last fetched.`
+    `Force pushing replaces the remote copy of ${branch} with yours. Blue Gum uses --force-with-lease, so it refuses if someone else has pushed there since you last fetched.`
 
   const leased = async (branch: string, push: () => Promise<void>): Promise<void> => {
     try {

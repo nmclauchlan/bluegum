@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="build/icon.png" width="128" height="128" alt="Arbor icon">
+  <img src="build/icon.png" width="128" height="128" alt="Blue Gum icon">
 </p>
 
-<h1 align="center">Arbor</h1>
+<h1 align="center">Blue Gum</h1>
 
 <p align="center">
   <strong>The desktop git client for teams on Azure DevOps, GitHub and GitLab.</strong><br>
@@ -18,22 +18,22 @@
   <a href="#keyboard-shortcuts">Shortcuts</a>
 </p>
 
-![Arbor showing a repository in a tab group, with build status on the graph and sidebar and a merged pull request's description in the commit panel](docs/screenshot.png)
+![Blue Gum showing a repository in a tab group, with build status on the graph and sidebar and a merged pull request's description in the commit panel](docs/screenshot.png)
 
-## Why Arbor
+## Why Blue Gum
 
-Engineering teams rarely work in one repository. A typical day spans an API, a front end, shared libraries and infrastructure, each with its own branches, reviews and pipelines spread across browser tabs. Arbor brings all of it into one place:
+Engineering teams rarely work in one repository. A typical day spans an API, a front end, shared libraries and infrastructure, each with its own branches, reviews and pipelines spread across browser tabs. Blue Gum brings all of it into one place:
 
 - **Code, reviews and CI together.** Pull requests, reviewers and build results sit next to the commit graph, so you know whether a branch is green before you merge it.
 - **Built for many repositories.** Tab groups, a Repository Management home screen, bulk fetch and pull, and a Ctrl+P switcher keep dozens of repositories in reach.
 - **Safe by design.** Commits, checkouts, merges, resets and more can be undone with Ctrl+Z. Conflicts are resolved side by side. Destructive actions ask first.
-- **Works with the git you already have.** Arbor drives your installed git, so your config, credential helpers, SSH keys and hooks work exactly as they do on the command line.
+- **Works with the git you already have.** Blue Gum drives your installed git, so your config, credential helpers, SSH keys and hooks work exactly as they do on the command line.
 
 ## Features
 
 ### Built for teams on Azure DevOps, GitHub and GitLab
 
-Connect Azure DevOps Services, GitHub.com, GitHub Enterprise Server, GitLab.com or a self-managed GitLab instance, and Arbor becomes a front end for your team's workflow:
+Connect Azure DevOps Services, GitHub.com, GitHub Enterprise Server, GitLab.com or a self-managed GitLab instance, and Blue Gum becomes a front end for your team's workflow:
 
 - Open pull and merge requests appear in the sidebar and as badges on their branches, with reviewers and votes, checks, merge state and a link to the browser.
 - Create a pull request for the current branch from the toolbar, or start one from any branch's context menu.
@@ -45,7 +45,7 @@ Connect Azure DevOps Services, GitHub.com, GitHub Enterprise Server, GitLab.com 
 
 ![Build status on the commit graph, sidebar branches, pull requests and tags, with a failed test shown in the commit panel](docs/build-status.png)
 
-Arbor shows build status from Azure Pipelines, GitHub Actions and checks, and GitLab CI everywhere you look:
+Blue Gum shows build status from Azure Pipelines, GitHub Actions and checks, and GitLab CI everywhere you look:
 
 - **On the graph.** Every recent commit carries a passed, failed or running marker. Hover for each pipeline's result.
 - **In the sidebar.** Local and remote branches, pull requests and tags show the status of their latest commit.
@@ -54,9 +54,9 @@ Arbor shows build status from Azure Pipelines, GitHub Actions and checks, and Gi
 
 ### Stay ahead of your team
 
-Arbor fetches your open repositories in the background, every ten minutes by default, and the bell in the title bar tells you what changed:
+Blue Gum fetches your open repositories in the background, every ten minutes by default, and the bell in the title bar tells you what changed:
 
-- **New commits** on the remote branches you track, listed by repository. One entry covers every local branch that tracks the same remote branch. Only commits that land after Arbor starts watching a branch count as new, so a branch you rarely pull won't bury you in old history.
+- **New commits** on the remote branches you track, listed by repository. One entry covers every local branch that tracks the same remote branch. Only commits that land after Blue Gum starts watching a branch count as new, so a branch you rarely pull won't bury you in old history.
 - **Failed builds** on the latest commit of those remote branches. Click one to open the commit with its errors.
 - Jump to any commit in the graph, pull with one click, or clear entries (individually or all at once) until something new arrives.
 
@@ -65,7 +65,7 @@ Arbor fetches your open repositories in the background, every ten minutes by def
 - **Repository Management** (Ctrl+T) lists your open, favourite and recent repositories with their project, current branch, how far each is ahead or behind, and how many files have changed. Search them, star favourites, and fetch or pull many at once.
 - **Go to repository** (Ctrl+P) finds any open, favourite or recent repository as you type and jumps straight to it.
 - **Tab groups** gather related repositories under one named, colour-coded tab. Pull a whole group with one click. See [Organise repositories with tab groups](#organise-repositories-with-tab-groups).
-- **Fast to open.** Arbor restores your tabs on launch but only loads a repository when you open its tab, so even a large workspace opens quickly.
+- **Fast to open.** Blue Gum restores your tabs on launch but only loads a repository when you open its tab, so even a large workspace opens quickly.
 
 ### A complete git toolkit
 
@@ -103,7 +103,7 @@ Design and asset changes deserve better than "binary file changed". Select any c
 
 ![Swiping between two versions of an image](docs/image-swipe.png)
 
-### Resolve merge conflicts without leaving Arbor
+### Resolve merge conflicts without leaving Blue Gum
 
 When a merge, cherry-pick, revert or rebase stops on conflicts, a banner shows the operation in progress and the changes panel lists every conflicted file. Open one to work through it:
 
@@ -117,13 +117,13 @@ When a merge, cherry-pick, revert or rebase stops on conflicts, a banner shows t
 
 ### Safe by design
 
-- **Undo and redo** (Ctrl+Z and Ctrl+Shift+Z) reverse commits, amends, checkouts, branch creation and deletion, resets, merges, pulls, cherry-picks and reverts. Arbor checks the repository hasn't moved on before reversing anything, and never discards uncommitted work.
+- **Undo and redo** (Ctrl+Z and Ctrl+Shift+Z) reverse commits, amends, checkouts, branch creation and deletion, resets, merges, pulls, cherry-picks and reverts. Blue Gum checks the repository hasn't moved on before reversing anything, and never discards uncommitted work.
 - **Confirmation first.** Resets, discards, and deleting branches, tags or stashes ask before they run.
 - **No surprises.** Merges that hit conflicts stop and show the conflicts, and pulls from notifications only ever fast-forward.
 
 ### Make it yours
 
-Arrange Arbor around the way you work:
+Arrange Blue Gum around the way you work:
 
 - **Panels.** Hide the branch panel or the commit panel with the buttons at either end of the toolbar, from the View menu, or by dragging a panel's edge closed. Drag the edges to resize them.
 - **Columns.** Right-click the graph header to show or hide the Branch / Tag, Graph, Author, Date and SHA columns, fit every column to its content, or reset the layout. The message column is always shown and gets the most room.
@@ -160,7 +160,7 @@ Tab groups keep related repositories together: a product's API, web app and infr
 
 ![The group context menu with Pull all, rename, colour and ungroup](docs/tab-group-menu.png)
 
-Drag groups and tabs to reorder them. Groups, their colours and your open tabs are restored the next time you start Arbor.
+Drag groups and tabs to reorder them. Groups, their colours and your open tabs are restored the next time you start Blue Gum.
 
 ## Download
 
@@ -168,11 +168,11 @@ Download the latest version from the [releases page](https://github.com/nmclauch
 
 | Platform | Package |
 | --- | --- |
-| Windows | `Arbor-<version>-win-x64.exe` installer |
-| macOS | `Arbor-<version>-mac-<arch>.dmg` |
+| Windows | `BlueGum-<version>-win-x64.exe` installer |
+| macOS | `BlueGum-<version>-mac-<arch>.dmg` |
 | Linux | `.AppImage` or `.deb` |
 
-Installed builds keep themselves up to date. Arbor checks for new versions in the background, downloads them, and offers a restart from the status bar. The version number sits at the bottom right of the window; right-click it to check for updates on demand, read the release notes or copy the version. Automatic checks can be turned off in Settings.
+Installed builds keep themselves up to date. Blue Gum checks for new versions in the background, downloads them, and offers a restart from the status bar. The version number sits at the bottom right of the window; right-click it to check for updates on demand, read the release notes or copy the version. Automatic checks can be turned off in Settings.
 
 ## Connect your hosts
 
@@ -184,13 +184,13 @@ Open **Settings → Accounts**, choose the service, enter its address and paste 
 | GitHub and GitHub Enterprise Server | `https://github.com` or `https://github.your-company.com` | Repositories, pull requests, checks and commit statuses |
 | GitLab and self-managed GitLab | `https://gitlab.com` or `https://gitlab.your-company.com` | The `api` scope |
 
-Arbor matches each repository to an account through its `origin` remote. If a token can't read build results, the commit panel says which scope to add rather than failing quietly.
+Blue Gum matches each repository to an account through its `origin` remote. If a token can't read build results, the commit panel says which scope to add rather than failing quietly.
 
 ## Security and privacy
 
-- **Your git, your rules.** Arbor runs the git executable on your machine (or the one you choose in Settings), so repository access goes through your existing credential helpers and SSH keys, and your hooks run as usual.
+- **Your git, your rules.** Blue Gum runs the git executable on your machine (or the one you choose in Settings), so repository access goes through your existing credential helpers and SSH keys, and your hooks run as usual.
 - **Tokens stay protected.** Personal access tokens are encrypted with your operating system's credential store where available, and are only ever sent to the host they belong to.
-- **No analytics.** Arbor contains no usage tracking. It connects only to:
+- **No analytics.** Blue Gum contains no usage tracking. It connects only to:
   - your git remotes;
   - the hosts you connect;
   - GitHub Releases, to check for updates;
@@ -200,7 +200,7 @@ Arbor matches each repository to an account through its `origin` remote. If a to
 
 ## Keyboard shortcuts
 
-Everything in Arbor works from the keyboard. Press F6 to move between areas (tabs, toolbar, branches, graph, details and status bar), use the arrow keys inside them, and press Shift+F10 or the Menu key for the same actions you'd get from a right-click. Help > Keyboard shortcuts lists every shortcut in the app. On macOS, use ⌘ in place of Ctrl.
+Everything in Blue Gum works from the keyboard. Press F6 to move between areas (tabs, toolbar, branches, graph, details and status bar), use the arrow keys inside them, and press Shift+F10 or the Menu key for the same actions you'd get from a right-click. Help > Keyboard shortcuts lists every shortcut in the app. On macOS, use ⌘ in place of Ctrl.
 
 | Shortcut | Action |
 | --- | --- |
@@ -233,7 +233,7 @@ Everything in Arbor works from the keyboard. Press F6 to move between areas (tab
 
 ## Building from source
 
-Arbor is built with Electron, React and TypeScript, and drives the `git` on your PATH.
+Blue Gum is built with Electron, React and TypeScript, and drives the `git` on your PATH.
 
 ```bash
 npm install

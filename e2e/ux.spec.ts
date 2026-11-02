@@ -34,7 +34,7 @@ test('narrow windows shrink the side panels so the graph keeps its room', async 
   commit(repo, 'README.md', '# app\n', 'Initial')
   const { page, close } = await launch(repo)
   try {
-    await page.evaluate(() => localStorage.setItem('arbor.layout', JSON.stringify({ sidebar: 300, panel: 600 })))
+    await page.evaluate(() => localStorage.setItem('bluegum.layout', JSON.stringify({ sidebar: 300, panel: 600 })))
     await page.reload()
     await page.setViewportSize({ width: 1024, height: 700 })
     const v = view(page)

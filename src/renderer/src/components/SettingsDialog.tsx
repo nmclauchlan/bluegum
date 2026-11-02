@@ -28,7 +28,7 @@ function Accounts({ suggestBaseUrl }: { suggestBaseUrl?: string }): React.JSX.El
     setNote(null)
     try {
       const acc = await window.host.addAccount(kind, baseUrl, token)
-      window.dispatchEvent(new Event('arbor:accounts-changed'))
+      window.dispatchEvent(new Event('bluegum:accounts-changed'))
       setNote({ text: `Connected as ${acc.user}${acc.encrypted ? '' : ' (token stored without OS encryption)'}`, error: false })
       setToken('')
       reload()
@@ -54,7 +54,7 @@ function Accounts({ suggestBaseUrl }: { suggestBaseUrl?: string }): React.JSX.El
             onClick={() =>
               window.host.removeAccount(a.kind, a.baseUrl).then(() => {
                 reload()
-                window.dispatchEvent(new Event('arbor:accounts-changed'))
+                window.dispatchEvent(new Event('bluegum:accounts-changed'))
               })
             }
           >
@@ -160,7 +160,7 @@ export function SettingsDialog({ onClose, suggestBaseUrl }: { onClose: () => voi
       <div className="dialog settings-dialog" onMouseDown={(e) => e.stopPropagation()}>
         <div className="settings-head">
           <h3>Settings</h3>
-          <span className="muted">Arbor {version}</span>
+          <span className="muted">Blue Gum {version}</span>
           <button className="icon" onClick={onClose} title="Close (Esc)" aria-label="Close">
             <Icon name="close" />
           </button>
@@ -322,7 +322,7 @@ export function SettingsDialog({ onClose, suggestBaseUrl }: { onClose: () => voi
               setGitPath('')
               setGitTest(null)
               setFileView('tree')
-              setTheme('arbor-dark')
+              setTheme('bluegum-dark')
             }}
           >
             Reset to defaults

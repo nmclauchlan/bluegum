@@ -5,8 +5,8 @@ import { errorMessage, formatDate, hostName } from '../util'
 import { Icon } from './Icon'
 import { focusItem, listKeys, navItems, useRovingFocus } from '../keynav'
 
-const DIR_KEY = 'arbor.cloneDir'
-const PROTO_KEY = 'arbor.cloneProtocol'
+const DIR_KEY = 'bluegum.cloneDir'
+const PROTO_KEY = 'bluegum.cloneProtocol'
 
 function loadPref(key: string, fallback: string): string {
   try {

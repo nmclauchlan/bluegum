@@ -16,7 +16,7 @@ test('double-clicking a column edge fits it, drags never push columns off screen
   const { app, page, close } = await launch(repo)
   try {
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1800, 1000))
-    await page.evaluate(() => localStorage.setItem('arbor.layout', JSON.stringify({ sidebar: 160, panel: 300, colRefs: 100 })))
+    await page.evaluate(() => localStorage.setItem('bluegum.layout', JSON.stringify({ sidebar: 160, panel: 300, colRefs: 100 })))
     await page.reload()
     const authorCell = view(page).locator('.commit-row', { hasText: 'Long author' }).locator('.author')
     await expect(authorCell).toBeVisible()
@@ -24,7 +24,7 @@ test('double-clicking a column edge fits it, drags never push columns off screen
 
     await handle(page, 'colAuthor').dblclick()
     await expect.poll(() => truncated(authorCell)).toBe(false)
-    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('arbor.layout') ?? '{}').colAuthor)).toBeGreaterThan(110)
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('bluegum.layout') ?? '{}').colAuthor)).toBeGreaterThan(110)
 
     const badgeName = view(page).locator('.commit-row', { hasText: 'Long author' }).locator('.refs-cell > .ref-badge .ref-name').first()
     expect(await truncated(badgeName)).toBe(true)

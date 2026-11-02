@@ -7,7 +7,7 @@ test('the status bar shows the branch, its upstream, ahead and behind counts, an
   commit(repo, 'mine.txt', 'mine\n', 'My local work')
   const { page, close } = await launch(repo)
   try {
-    await page.evaluate(() => localStorage.setItem('arbor.settings', JSON.stringify({ backgroundFetch: 5 })))
+    await page.evaluate(() => localStorage.setItem('bluegum.settings', JSON.stringify({ backgroundFetch: 5 })))
     await page.reload()
     const bar = view(page).locator('.statusbar')
     await expect(bar.locator('.sync-branch')).toHaveText('main')

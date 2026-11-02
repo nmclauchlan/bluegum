@@ -7,7 +7,7 @@ export interface Theme {
   vars: Record<string, string>
 }
 
-const KEY = 'arbor.theme'
+const KEY = 'bluegum.theme'
 
 function luminance(hex: string): number {
   const n = parseInt(hex.slice(1), 16)
@@ -47,7 +47,7 @@ function palette(
 
 export const THEMES: Theme[] = [
   {
-    id: 'arbor-dark', name: 'Arbor Dark', dark: true,
+    id: 'bluegum-dark', name: 'Blue Gum Dark', dark: true,
     vars: palette(true, ['#1b1d23', '#22252c', '#2a2e37', '#343945'], '#30343d', ['#d7dae0', '#8b909c', '#5d626d'], ['#3e9cf0', '#2f7fc9'],
       { green: '#58c36b', red: '#e8534a', yellow: '#f1a33c', purple: '#b16df5' },
       { 'syn-keyword': '#c678dd', 'syn-string': '#98c379', 'syn-comment': '#6b717d', 'syn-number': '#d19a66', 'syn-type': '#e5c07b', 'syn-function': '#61afef', 'syn-property': '#e06c75', 'syn-tag': '#e06c75', 'syn-operator': '#56b6c2' })
@@ -148,7 +148,7 @@ export const THEMES: Theme[] = [
     }
   },
   {
-    id: 'arbor-light', name: 'Arbor Light', dark: false,
+    id: 'bluegum-light', name: 'Blue Gum Light', dark: false,
     vars: palette(false, ['#ffffff', '#f6f8fa', '#eaeef2', '#d0d7de'], '#d0d7de', ['#1f2328', '#656d76', '#8c959f'], ['#0969da', '#0550ae'],
       { green: '#1a7f37', red: '#cf222e', yellow: '#bf8700', purple: '#8250df' },
       { 'syn-keyword': '#cf222e', 'syn-string': '#0a3069', 'syn-comment': '#6e7781', 'syn-number': '#0550ae', 'syn-type': '#953800', 'syn-function': '#8250df', 'syn-property': '#0550ae', 'syn-tag': '#116329', 'syn-operator': '#cf222e' })

@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'fs'
 import { tmpdir } from 'os'
 import { dirname, join } from 'path'
 
-const MAIN = join(__dirname, '..')
+export const MAIN = join(__dirname, '..')
 
 let clock = Date.parse('2026-01-01T09:00:00Z')
 
@@ -19,8 +19,8 @@ export function git(cwd: string, ...args: string[]): string {
   return execFileSync('git', args, { cwd, env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
 }
 
-export function tempDir(prefix = 'arbor-e2e-'): string {
-  return mkdtempSync(join(process.env.ARBOR_E2E_TMP ?? tmpdir(), prefix))
+export function tempDir(prefix = 'bluegum-e2e-'): string {
+  return mkdtempSync(join(process.env.BLUEGUM_E2E_TMP ?? tmpdir(), prefix))
 }
 
 export function write(repo: string, file: string, content: string): void {
@@ -71,14 +71,14 @@ export interface Launched {
   close: () => Promise<void>
 }
 
-export async function launch(repoPath?: string, userData = tempDir('arbor-profile-')): Promise<Launched> {
+export async function launch(repoPath?: string, userData = tempDir('bluegum-profile-')): Promise<Launched> {
   const args = [MAIN]
   if (process.platform === 'linux') args.push('--no-sandbox')
   if (repoPath) args.push(repoPath)
-  const scratch = process.env.ARBOR_E2E_TMP
+  const scratch = process.env.BLUEGUM_E2E_TMP
   const app = await electron.launch({
     args,
-    env: { ...process.env, ...(scratch && { TMP: scratch, TEMP: scratch, TMPDIR: scratch }), ARBOR_USER_DATA: userData, NODE_ENV: 'production' } as Record<string, string>
+    env: { ...process.env, ...(scratch && { TMP: scratch, TEMP: scratch, TMPDIR: scratch }), BLUEGUM_USER_DATA: userData, NODE_ENV: 'production' } as Record<string, string>
   })
   const page = await app.firstWindow()
   await page.waitForSelector('.app')

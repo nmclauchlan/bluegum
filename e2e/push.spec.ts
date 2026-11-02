@@ -8,7 +8,7 @@ test('a rejected push after rewriting history offers a force push with lease, wh
   git(repo, 'commit', '-q', '--amend', '-m', 'First feature, reworded')
   const { page, close } = await launch(repo)
   try {
-    await page.evaluate(() => localStorage.setItem('arbor.settings', JSON.stringify({ backgroundFetch: 0 })))
+    await page.evaluate(() => localStorage.setItem('bluegum.settings', JSON.stringify({ backgroundFetch: 0 })))
     await page.reload()
     const v = view(page)
     await expect(v.locator('.commit-row').first()).toBeVisible()

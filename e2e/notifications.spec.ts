@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { commit, git, initRepo, launch, repoWithRemote, tempDir, view } from './helpers'
 
 function baselines(page: Page): Promise<string[]> {
-  return page.evaluate(() => Object.values(JSON.parse(localStorage.getItem('arbor.incomingBaselines') ?? '{}')) as string[])
+  return page.evaluate(() => Object.values(JSON.parse(localStorage.getItem('bluegum.incomingBaselines') ?? '{}')) as string[])
 }
 
 test('the bell lists only commits that arrive after the first check, opens them and pulls them', async () => {
@@ -15,7 +15,7 @@ test('the bell lists only commits that arrive after the first check, opens them 
 
   const { page, close } = await launch(repo)
   try {
-    await page.evaluate(() => localStorage.setItem('arbor.settings', JSON.stringify({ pollInterval: 60 })))
+    await page.evaluate(() => localStorage.setItem('bluegum.settings', JSON.stringify({ pollInterval: 60 })))
     await page.reload()
     await expect(view(page).locator('.commit-row').first()).toBeVisible()
     const bell = page.getByRole('button', { name: /^Notifications/ })
@@ -68,7 +68,7 @@ test('cleared remote branches only show later commits, and branches tracking the
 
   const { page, close } = await launch(repo)
   try {
-    await page.evaluate(() => localStorage.setItem('arbor.settings', JSON.stringify({ backgroundFetch: 0 })))
+    await page.evaluate(() => localStorage.setItem('bluegum.settings', JSON.stringify({ backgroundFetch: 0 })))
     await page.reload()
     await expect(view(page).locator('.commit-row').first()).toBeVisible()
     const bell = page.getByRole('button', { name: /^Notifications/ })
