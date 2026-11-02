@@ -7,7 +7,7 @@ export interface Shell {
   openMenu(e: React.MouseEvent, items: MenuItem[]): void
   confirm(title: string, message: string, danger?: boolean): Promise<boolean>
   prompt(title: string, label: string, defaultValue?: string): Promise<string | null>
-  showError(message: string): void
+  showError(message: string, title?: string): void
   showInfo(message: string): void
   openSettings(suggestBaseUrl?: string): void
   openPath(path: string): void

@@ -72,7 +72,7 @@ test('merge without fast-forward, squash merge into staged changes, and ignore u
 
     write(repo, 'logs/build.log', 'noise\n')
     write(repo, 'secret[1].txt', 'shh\n')
-    await expect(v.locator('.commit-row.wip')).toBeVisible()
+    await expect(v.locator('.commit-row.wip')).toContainText('2 uncommitted')
     await v.locator('.commit-row.wip').click()
     await v.locator('.panel .file-item', { hasText: 'build.log' }).click({ button: 'right' })
     await menuItem(page, 'Ignore all .log files')

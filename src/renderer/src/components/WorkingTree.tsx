@@ -10,6 +10,7 @@ import { Icon } from './Icon'
 type Area = 'staged' | 'unstaged'
 
 const SUMMARY_LIMIT = 72
+const FAILED: Record<string, string> = { commit: 'Commit failed', stage: 'Staging failed', unstage: 'Unstaging failed', discard: 'Discarding failed', abort: 'Abort failed', continue: 'Continuing failed' }
 
 export function WorkingTree({
   repoPath,
@@ -93,7 +94,7 @@ export function WorkingTree({
     try {
       await fn()
     } catch (e) {
-      actions.showError(errorMessage(e))
+      actions.showError(errorMessage(e), FAILED[key.replace(/-all$/, '')])
     } finally {
       setWorking(null)
       actions.refresh()

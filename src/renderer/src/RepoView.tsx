@@ -386,7 +386,7 @@ export function RepoView({
         await fn()
         if (successMessage) shell.showInfo(successMessage)
       } catch (e) {
-        shell.showError(errorMessage(e))
+        shell.showError(errorMessage(e), `${label} failed`)
       } finally {
         setBusy(null)
         refresh()

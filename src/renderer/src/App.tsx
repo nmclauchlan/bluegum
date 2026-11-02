@@ -21,6 +21,7 @@ import { setPanelCollapsed, useCollapsedPanels } from './layout'
 import { collectCommands, type Command } from './commands'
 import { CommandPalette } from './components/CommandPalette'
 import { Icon } from './components/Icon'
+import { Toast, type ToastState } from './components/Toast'
 import { syncSettingsFromMain, useSettings } from './settings'
 import { BellIcon, failedBuildKey, NotificationsPanel, type FailedBuild, type RepoIncoming } from './components/Notifications'
 import {
@@ -28,11 +29,6 @@ import {
   newGroupId, nextGroupColor, reorderGroups, saveTabs,
   type Tab, type TabGroup
 } from './tabs'
-
-interface Toast {
-  kind: 'error' | 'info'
-  text: string
-}
 
 interface ClearUndo {
   baselines: Record<string, string>
@@ -65,7 +61,8 @@ export default function App(): React.JSX.Element {
   const [groupProgress, setGroupProgress] = useState<Record<string, { done: number; total: number }>>({})
   const [activePath, setActivePath] = useState<string | null>(null)
   const [recent, setRecent] = useState<RepoInfo[]>([])
-  const [toast, setToast] = useState<Toast | null>(null)
+  const [toast, setToast] = useState<ToastState | null>(null)
+  const toastId = useRef(0)
   const [menu, setMenu] = useState<MenuState | null>(null)
   const dialogs = useDialogs()
   const restored = useRef(false)
@@ -107,17 +104,12 @@ export default function App(): React.JSX.Element {
   }, [])
 
   useEffect(() => {
-    if (!toast) return
-    const t = setTimeout(() => setToast(null), toast.kind === 'error' ? 10000 : 3000)
-    return () => clearTimeout(t)
-  }, [toast])
-
-  useEffect(() => {
     if (restored.current) saveTabs(tabs, groups, activePath)
   }, [tabs, groups, activePath])
 
-  const showError = useCallback((text: string) => setToast({ kind: 'error', text }), [])
-  const showInfo = useCallback((text: string) => setToast({ kind: 'info', text }), [])
+  const showError = useCallback((text: string, title?: string) => setToast({ id: ++toastId.current, kind: 'error', text, title }), [])
+  const showInfo = useCallback((text: string) => setToast({ id: ++toastId.current, kind: 'info', text }), [])
+  const closeToast = useCallback(() => setToast(null), [])
 
   const loadRecent = useCallback(() => {
     window.git.recentRepos().then(setRecent).catch(() => undefined)
@@ -938,11 +930,7 @@ export default function App(): React.JSX.Element {
       )}
       {settingsOpen && <SettingsDialog suggestBaseUrl={settingsOpen.suggestBaseUrl} onClose={() => setSettingsOpen(false)} />}
       {dialogs.element}
-      {toast && (
-        <div className={`toast ${toast.kind}`} onClick={() => setToast(null)}>
-          {toast.text}
-        </div>
-      )}
+      {toast && <Toast key={toast.id} toast={toast} onClose={closeToast} />}
     </div>
   )
 }
