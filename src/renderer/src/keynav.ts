@@ -20,6 +20,7 @@ export function ownsKeys(target: EventTarget | null): boolean {
 
 export function focusItem(el: HTMLElement | undefined): void {
   if (!el) return
+  if (!el.hasAttribute('tabindex') && el.tabIndex < 0) el.tabIndex = -1
   el.focus()
   el.scrollIntoView({ block: 'nearest', inline: 'nearest' })
 }
@@ -47,13 +48,14 @@ function attachRoving(root: HTMLElement): () => void {
   let lastIndex = 0
   const sync = (): void => {
     const items = navItems(root)
+    let replacement: HTMLElement | undefined
     if (last && !last.isConnected) {
-      const replacement = items[Math.min(lastIndex, items.length - 1)]
+      replacement = items[Math.min(lastIndex, items.length - 1)]
       last = null
-      if (replacement && (!document.activeElement || document.activeElement === document.body)) replacement.focus({ preventScroll: true })
     }
-    const current = last && items.includes(last) ? last : (items.find((el) => el.matches('[aria-selected="true"], [aria-current]')) ?? items[0])
+    const current = last && items.includes(last) ? last : (replacement ?? items.find((el) => el.matches('[aria-selected="true"], [aria-current]')) ?? items[0])
     for (const el of root.querySelectorAll<HTMLElement>(ITEM)) el.tabIndex = el === current ? 0 : -1
+    if (replacement && (!document.activeElement || document.activeElement === document.body)) replacement.focus({ preventScroll: true })
   }
   const onFocus = (e: FocusEvent): void => {
     const item = (e.target as HTMLElement).closest<HTMLElement>(ITEM)

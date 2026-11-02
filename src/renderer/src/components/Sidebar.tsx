@@ -28,12 +28,16 @@ function Section({
     <div>
       <div className="section-title" data-nav role="treeitem" aria-level={1} aria-expanded={shown} onClick={() => setOpen(!open)}>
         <span>
-          <Icon name={shown ? 'chevronDown' : 'chevronRight'} size={12} />
+          <Icon name="chevronRight" size={12} className={`disclosure${shown ? ' open' : ''}`} />
           {title}
         </span>
         <span>{count}</span>
       </div>
-      {shown && children}
+      {shown && (
+        <div className="section-body" role="group">
+          {children}
+        </div>
+      )}
     </div>
   )
 }

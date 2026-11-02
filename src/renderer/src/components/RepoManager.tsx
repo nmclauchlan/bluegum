@@ -273,7 +273,7 @@ export function RepoManager({
           <section key={sec.id} className="repo-section" aria-labelledby={`sec-${sec.id}`}>
             <div className="repo-section-head">
               <button className="icon repo-section-toggle" aria-expanded={!collapsed[sec.id]} onClick={() => toggleSection(sec.id)} id={`sec-${sec.id}`}>
-                <Icon name={collapsed[sec.id] ? 'chevronRight' : 'chevronDown'} size={12} />
+                <Icon name="chevronRight" size={12} className={`disclosure${collapsed[sec.id] ? '' : ' open'}`} />
                 <span>{sec.title}</span>
                 <span className="count">{sec.entries.length}</span>
               </button>

@@ -16,10 +16,10 @@ test('the branch and commit panels collapse from the toolbar, the View menu and 
 
     await v.getByRole('button', { name: 'Hide the branch panel' }).click()
     await expect(sidebar).toBeHidden()
-    expect(await listWidth()).toBeGreaterThan(full + 150)
+    await expect.poll(listWidth).toBeGreaterThan(full + 150)
     await v.getByRole('button', { name: 'Hide the commit panel' }).click()
     await expect(details).toBeHidden()
-    expect(await listWidth()).toBeGreaterThan(full + 500)
+    await expect.poll(listWidth).toBeGreaterThan(full + 500)
 
     await page.reload()
     await expect(v.locator('.commit-row').first()).toBeVisible()
@@ -42,7 +42,7 @@ test('the branch and commit panels collapse from the toolbar, the View menu and 
     await expect(sidebar).toBeHidden()
     await v.getByRole('button', { name: 'Show the branch panel' }).click()
     await expect(sidebar).toBeVisible()
-    expect(await sidebar.evaluate((e) => e.getBoundingClientRect().width)).toBeGreaterThan(150)
+    await expect.poll(() => sidebar.evaluate((e) => e.getBoundingClientRect().width)).toBeGreaterThan(150)
   } finally {
     await close()
   }

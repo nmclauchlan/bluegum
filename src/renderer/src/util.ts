@@ -25,6 +25,10 @@ export function errorMessage(err: unknown): string {
 
 export const WIP_HASH = 'WIP'
 
+export function reducedMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
 export function hostName(kind: string): string {
   return kind === 'azure' ? 'Azure DevOps' : kind === 'github' ? 'GitHub' : kind === 'gitlab' ? 'GitLab' : kind
 }

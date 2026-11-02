@@ -81,6 +81,7 @@ export function CommitPanel({
         <div ref={filesNav} role="tree" aria-label="Changed files" onKeyDown={(e) => listKeys(e)}>
           <FileList
             files={details.files}
+            resetKey={details.hash}
             selectedPath={selected}
             onSelect={(f) => (viewing?.source.kind === 'commit' && viewing.source.hash === hash && viewing.file.path === f.path ? onView(null) : view(f, 'diff'))}
             onDoubleClick={(f) => view(f, 'edit')}

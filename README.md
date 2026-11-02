@@ -128,6 +128,7 @@ Arrange Blue Gum around the way you work:
 - **Panels.** Hide the branch panel or the commit panel with the buttons at either end of the toolbar, from the View menu, or by dragging a panel's edge closed. Drag the edges to resize them.
 - **Columns.** Right-click the graph header to show or hide the Branch / Tag, Graph, Author, Date and SHA columns, fit every column to its content, or reset the layout. The message column is always shown and gets the most room.
 - **Themes.** 23 themes, dark and light, including One Dark, Dracula, Tokyo Night, Catppuccin, Nord, Solarized, Gruvbox, Everforest, Kanagawa, Monokai, Night Owl and Rosé Pine, plus high-contrast dark and light themes with a bolder focus outline. Pick one from the theme button in the title bar, View > Theme… or Settings.
+- **Motion.** Short animations show what changed: new commits glow in the graph, staged files slide into place, and jumping to a commit pulses it. They switch off when your system is set to reduce motion.
 - **Settings** (⚙ or Ctrl+,) cover tree or flat file lists, author avatars and description previews, how often repositories refresh, and how much history to load.
 
 ![The graph header menu with ticks for each column, and the panel buttons at both ends of the toolbar](docs/columns-menu.png)

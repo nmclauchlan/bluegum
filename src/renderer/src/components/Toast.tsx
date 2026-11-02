@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Icon } from './Icon'
-import { copyToClipboard } from '../util'
+import { copyToClipboard, reducedMotion } from '../util'
 
 export interface ToastState {
   id: number
@@ -10,6 +10,7 @@ export interface ToastState {
 }
 
 const LONG = 160
+const LEAVE_MS = 120
 
 function headline(text: string): string {
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
@@ -17,7 +18,9 @@ function headline(text: string): string {
   return key.charAt(0).toUpperCase() + key.slice(1)
 }
 
-export function Toast({ toast, onClose }: { toast: ToastState; onClose: () => void }): React.JSX.Element {
+export function Toast({ toast, onClose: remove }: { toast: ToastState; onClose: () => void }): React.JSX.Element {
+  const [leaving, setLeaving] = useState(false)
+  const onClose = useCallback(() => setLeaving(true), [])
   const [expanded, setExpanded] = useState(false)
   const [copied, setCopied] = useState(false)
   const [hovered, setHovered] = useState(false)
@@ -31,6 +34,12 @@ export function Toast({ toast, onClose }: { toast: ToastState; onClose: () => vo
   }, [toast.id, hovered, long, error, onClose])
 
   useEffect(() => {
+    if (!leaving) return
+    const t = setTimeout(remove, reducedMotion() ? 0 : LEAVE_MS)
+    return () => clearTimeout(t)
+  }, [leaving, remove])
+
+  useEffect(() => {
     if (!copied) return
     const t = setTimeout(() => setCopied(false), 1500)
     return () => clearTimeout(t)
@@ -38,7 +47,7 @@ export function Toast({ toast, onClose }: { toast: ToastState; onClose: () => vo
 
   if (!error) {
     return (
-      <div className="toast info" role="status" onClick={onClose} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+      <div className={`toast info${leaving ? ' leaving' : ''}`} role="status" onClick={onClose} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
         {toast.text}
       </div>
     )
@@ -49,7 +58,7 @@ export function Toast({ toast, onClose }: { toast: ToastState; onClose: () => vo
   }
 
   return (
-    <div className="toast error" role="alert" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+    <div className={`toast error${leaving ? ' leaving' : ''}`} role="alert" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
       <div className="toast-head">
         <Icon name="warning" size={14} />
         <strong>{toast.title ?? 'Something went wrong'}</strong>

@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { Commit, CommitBuild, Ref } from '@shared/types'
 import { LANE_COLORS, layoutGraph } from '../graph/layout'
-import { formatDate, shortHash, WIP_HASH } from '../util'
+import { formatDate, reducedMotion, shortHash, WIP_HASH } from '../util'
 import { resetColumns, resetLayout, setColumnHidden, setLayout, useHiddenColumns, useLayout, useWindowWidth, type Layout } from '../layout'
 import { useSettings } from '../settings'
 import { Avatar } from '../avatars'
@@ -11,6 +11,9 @@ import type { MenuItem } from './ContextMenu'
 import { focusItem } from '../keynav'
 
 const ROW_H = 28
+const FRESH_LIMIT = 20
+const SMOOTH_SCREENS = 3
+const NONE: ReadonlySet<string> = new Set()
 const MAX_LANES = 14
 const OVERSCAN = 12
 const NODE = 22
@@ -361,6 +364,30 @@ export function CommitList({
     }
   }, [total])
 
+  const known = useRef<Set<string> | null>(null)
+  const [fresh, setFresh] = useState(NONE)
+  useLayoutEffect(() => {
+    const hashes = commits.filter((c) => c.hash !== WIP_HASH).map((c) => c.hash)
+    const before = known.current
+    known.current = new Set(hashes)
+    if (!before) return
+    const added = hashes.filter((h) => !before.has(h))
+    if (added.length && added.length <= FRESH_LIMIT && added.length <= hashes.length / 2) setFresh(new Set(added))
+  }, [commits])
+  useEffect(() => {
+    if (!fresh.size) return
+    const t = setTimeout(() => setFresh(NONE), 1800)
+    return () => clearTimeout(t)
+  }, [fresh])
+
+  const [landed, setLanded] = useState<string | null>(null)
+  const lastJump = useRef<number | null>(null)
+  useEffect(() => {
+    if (!landed) return
+    const t = setTimeout(() => setLanded(null), 1200)
+    return () => clearTimeout(t)
+  }, [landed])
+
   useEffect(() => {
     if (!scrollTarget || !container.current) return
     const idx = commits.findIndex((c) => c.hash === scrollTarget.hash)
@@ -372,7 +399,12 @@ export function CommitList({
       else if (top + ROW_H > el.scrollTop + el.clientHeight) el.scrollTop = top + ROW_H - el.clientHeight
       return
     }
-    el.scrollTop = Math.max(0, top - el.clientHeight / 2 + ROW_H / 2)
+    const target = Math.max(0, top - el.clientHeight / 2 + ROW_H / 2)
+    const jump = lastJump.current !== scrollTarget.n
+    lastJump.current = scrollTarget.n
+    const near = Math.abs(target - el.scrollTop) <= el.clientHeight * SMOOTH_SCREENS
+    el.scrollTo({ top: target, behavior: jump && near && !reducedMotion() ? 'smooth' : 'auto' })
+    if (jump) setLanded(scrollTarget.hash)
   }, [scrollTarget, commits])
 
   const cx = (lane: number): number => lane * laneW + laneW / 2 + 4
@@ -454,7 +486,7 @@ export function CommitList({
         role="option"
         aria-selected={selected === c.hash}
         data-hash={c.hash}
-        className={`commit-row${selected === c.hash ? ' selected' : ''}${isWip ? ' wip' : ''}${matches?.has(c.hash) ? ' match' : ''}`}
+        className={`commit-row${selected === c.hash ? ' selected' : ''}${isWip ? ' wip' : ''}${matches?.has(c.hash) ? ' match' : ''}${fresh.has(c.hash) ? ' fresh' : ''}${landed === c.hash ? ' landed' : ''}`}
         style={{ top: i * ROW_H }}
         onClick={() => onSelect(c.hash)}
         onContextMenu={(e) => {

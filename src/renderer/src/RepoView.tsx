@@ -19,12 +19,13 @@ import { WorkingTree } from './components/WorkingTree'
 import { Splitter } from './components/Splitter'
 import { AppVersion, UpdateNotice } from './components/UpdateNotice'
 import { fitPanels, setLayout, setPanelCollapsed, useCollapsedPanels, useLayout, useWindowWidth } from './layout'
-import { copyToClipboard, errorMessage, prNoun, shortHash, WIP_HASH } from './util'
+import { copyToClipboard, errorMessage, prNoun, reducedMotion, shortHash, WIP_HASH } from './util'
 import { currentSettings, useSettings } from './settings'
 import { useCommands, type Command } from './commands'
 
 
 const PAGE_ROWS = 15
+const PANEL_MS = 260
 const BUILD_COMMITS = 50
 const BUILD_LOOKUPS = 150
 
@@ -130,6 +131,14 @@ export function RepoView({
   const detailsOpen = !collapsedPanels.includes('details')
   const windowWidth = useWindowWidth()
   const fitted = fitPanels(windowWidth, sidebarOpen ? layout.sidebar : 0, detailsOpen ? layout.panel : 0)
+  const panelKey = `${sidebarOpen}:${detailsOpen}`
+  const [panels, setPanels] = useState({ key: panelKey, moving: false })
+  if (panels.key !== panelKey) setPanels({ key: panelKey, moving: !reducedMotion() })
+  useEffect(() => {
+    if (!panels.moving) return
+    const t = setTimeout(() => setPanels((p) => ({ ...p, moving: false })), PANEL_MS)
+    return () => clearTimeout(t)
+  }, [panels])
 
   const loadAll = useCallback(async () => {
     const [log, r, s, u, f] = await Promise.all([
@@ -862,7 +871,7 @@ export function RepoView({
 
   return (
     <div
-      className={`repo-view${sidebarOpen ? '' : ' sidebar-collapsed'}${detailsOpen ? '' : ' details-collapsed'}${viewing || comparing ? ' viewing' : ''}`}
+      className={`repo-view${sidebarOpen ? '' : ' sidebar-collapsed'}${detailsOpen ? '' : ' details-collapsed'}${viewing || comparing ? ' viewing' : ''}${panels.moving ? ' panels-moving' : ''}`}
       style={{ gridTemplateColumns: `${sidebarOpen ? `${fitted.sidebar}px 4px` : '0 0'} minmax(0, 1fr) ${detailsOpen ? `4px ${fitted.panel}px` : '0 0'}` }}
     >
       <Toolbar

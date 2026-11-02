@@ -1,7 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { StatusFile } from '@shared/types'
 import { setFileView, useFileView } from '../fileView'
 import { Icon } from './Icon'
+
+const ARRIVE_MS = 900
+const NONE: ReadonlySet<string> = new Set()
 
 export function FileRow({
   file,
@@ -12,10 +15,12 @@ export function FileRow({
   onKeyDown,
   depth = 0,
   label,
+  entering = false,
   children
 }: {
   file: StatusFile
   selected: boolean
+  entering?: boolean
   onClick: (e: React.MouseEvent) => void
   onDoubleClick?: () => void
   onContextMenu?: (e: React.MouseEvent) => void
@@ -27,7 +32,7 @@ export function FileRow({
   const full = file.oldPath ? `${file.oldPath} → ${file.path}` : file.path
   return (
     <div
-      className={`file-item${selected ? ' selected' : ''}`}
+      className={`file-item${selected ? ' selected' : ''}${entering ? ' entering' : ''}`}
       data-nav
       data-path={file.path}
       role="treeitem"
@@ -117,7 +122,8 @@ export function FileList({
   onDoubleClick,
   onContextMenu,
   onKeyDown,
-  actions
+  actions,
+  resetKey
 }: {
   files: StatusFile[]
   selectedPath: string | null
@@ -126,8 +132,25 @@ export function FileList({
   onContextMenu?: (e: React.MouseEvent, files: StatusFile[], folder: string | null) => void
   onKeyDown?: (e: React.KeyboardEvent, f: StatusFile) => void
   actions?: (f: StatusFile) => React.ReactNode
+  resetKey?: string
 }): React.JSX.Element {
   const view = useFileView()
+  const known = useRef<{ key?: string; paths: Set<string> } | null>(null)
+  const [arrived, setArrived] = useState(NONE)
+  const entering = (path: string): boolean => arrived.has(path)
+  useLayoutEffect(() => {
+    const paths = new Set(files.map((f) => f.path))
+    const before = known.current
+    known.current = { key: resetKey, paths }
+    if (!before || before.key !== resetKey) return
+    const added = [...paths].filter((p) => !before.paths.has(p))
+    if (added.length) setArrived(new Set(added))
+  }, [files, resetKey])
+  useEffect(() => {
+    if (!arrived.size) return
+    const t = setTimeout(() => setArrived(NONE), ARRIVE_MS)
+    return () => clearTimeout(t)
+  }, [arrived])
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const tree = useMemo(() => {
     if (view !== 'tree') return null
@@ -152,6 +175,7 @@ export function FileList({
             key={f.path}
             file={f}
             selected={selectedPath === f.path}
+            entering={entering(f.path)}
             onClick={(e) => e.detail < 2 && onSelect(f)}
             onDoubleClick={onDoubleClick ? () => onDoubleClick(f) : undefined}
             onContextMenu={onContextMenu ? (e) => onContextMenu(e, [f], null) : undefined}
@@ -182,7 +206,7 @@ export function FileList({
           title={dir.path}
         >
           <span className="chevron">
-            <Icon name={open ? 'chevronDown' : 'chevronRight'} size={12} />
+            <Icon name="chevronRight" size={12} className={`disclosure${open ? ' open' : ''}`} />
           </span>
           <span className="folder">
             <Icon name="folder" size={14} />
@@ -201,6 +225,7 @@ export function FileList({
           depth={depth}
           label={f.oldPath ? `${f.oldPath.slice(f.oldPath.lastIndexOf('/') + 1)} → ${name}` : name}
           selected={selectedPath === f.path}
+          entering={entering(f.path)}
           onClick={(e) => e.detail < 2 && onSelect(f)}
           onDoubleClick={onDoubleClick ? () => onDoubleClick(f) : undefined}
           onContextMenu={onContextMenu ? (e) => onContextMenu(e, [f], null) : undefined}

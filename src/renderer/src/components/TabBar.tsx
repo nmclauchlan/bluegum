@@ -333,7 +333,7 @@ export function TabBar({
           <span className="count">{count}</span>
         )}
         <span className="caret">
-          <Icon name={isOpen ? 'chevronUp' : 'chevronDown'} size={12} />
+          <Icon name="chevronDown" size={12} className={`disclosure-flip${isOpen ? ' open' : ''}`} />
         </span>
       </div>
     )
