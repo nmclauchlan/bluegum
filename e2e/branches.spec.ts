@@ -24,7 +24,7 @@ test('create a branch from the toolbar, filter for it, and undo its creation', a
     await answerPrompt(page, 'feature/search')
     await confirmDialog(page, true)
     await expect.poll(() => currentBranch(repo)).toBe('feature/search')
-    await expect(v.locator('.toolbar')).toContainText('on feature/search')
+    await expect(v.locator('.statusbar .sync-branch')).toHaveText('feature/search')
 
     await page.keyboard.press('Control+b')
     await page.keyboard.type('search')

@@ -41,6 +41,7 @@ test('branches, context menus, submenus and dialogs work from the keyboard alone
     await expect(page.locator('.submenu-layer')).toHaveCount(0)
     expect(await focused(page)).toBe('Checkout')
     await page.keyboard.press('ArrowRight')
+    await expect(page.locator('.submenu-layer .item:focus')).toHaveText('develop')
     await page.keyboard.press('Enter')
     await expect(page.locator('.context-menu-root')).toHaveCount(0)
     await expect.poll(() => git(repo, 'rev-parse', '--abbrev-ref', 'HEAD').trim()).toBe('develop')
