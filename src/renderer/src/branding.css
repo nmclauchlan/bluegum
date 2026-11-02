@@ -16,6 +16,14 @@
   background: radial-gradient(ellipse at 50% 34%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 56%);
 }
 
+html[data-theme='bluegum-dark'] .welcome { --welcome-leaf: #9fcdd6; }
+html[data-theme='bluegum-light'] .welcome { --welcome-leaf: #2b5866; }
+html[data-theme^='bluegum-'] .welcome {
+  background:
+    radial-gradient(ellipse at 50% 26%, color-mix(in srgb, var(--welcome-leaf) 8%, transparent), transparent 50%),
+    radial-gradient(ellipse at 50% 42%, color-mix(in srgb, var(--accent) 4%, transparent), transparent 64%);
+}
+
 .welcome-content {
   display: flex;
   flex-direction: column;
@@ -28,7 +36,7 @@
 
 .welcome-brand { display: flex; flex-direction: column; align-items: center; text-align: center; }
 .welcome-brand .brand-icon { margin-bottom: 18px; filter: drop-shadow(0 10px 24px rgb(0 0 0 / 12%)); }
-.welcome .welcome-heading { margin: 0; color: var(--fg); font-size: 40px; font-weight: 600; letter-spacing: -0.045em; line-height: 1.2; }
+.welcome .welcome-heading { margin: 0; color: var(--fg); font-size: 40px; font-weight: 650; letter-spacing: -0.035em; line-height: 1.2; }
 .welcome-tagline { margin: 10px 0 0; color: var(--fg-dim); font-size: 14px; line-height: 1.5; }
 
 .welcome-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
@@ -59,6 +67,11 @@
   to { opacity: 1; transform: scale(1); }
 }
 
+@keyframes brand-leaf-in {
+  from { opacity: 0; transform: scale(0.82); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 @keyframes welcome-in {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -69,13 +82,15 @@
   .welcome-actions { animation: welcome-in 300ms 80ms ease-out both; }
   .recent h2 { animation: welcome-in 300ms 120ms ease-out both; }
   .recent-repo { animation: welcome-in 280ms calc(140ms + var(--recent-delay, 0ms)) ease-out backwards; }
-  .brand-icon--animated .brand-trunk, .brand-icon--animated .brand-branch { stroke-dasharray: 1; animation: brand-grow 540ms cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .brand-icon--animated .brand-branch-left { animation-delay: 140ms; }
-  .brand-icon--animated .brand-branch-right { animation-delay: 220ms; }
-  .brand-icon--animated .brand-node { transform-box: fill-box; transform-origin: center; animation: brand-node-in 240ms ease-out both; }
-  .brand-icon--animated .brand-node-top { animation-delay: 280ms; }
-  .brand-icon--animated .brand-node-left { animation-delay: 360ms; }
-  .brand-icon--animated .brand-node-right { animation-delay: 440ms; }
+  .brand-icon--animated .brand-trunk, .brand-icon--animated .brand-branch { stroke-dasharray: 1; animation: brand-grow 240ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .brand-icon--animated .brand-trunk { animation-duration: 340ms; animation-delay: 260ms; }
+  .brand-icon--animated .brand-branch-left { animation-delay: 0ms; }
+  .brand-icon--animated .brand-branch-right { animation-delay: 340ms; }
+  .brand-icon--animated .brand-node { transform-box: fill-box; transform-origin: center; animation: brand-node-in 180ms ease-out both; }
+  .brand-icon--animated .brand-node-top { transform-origin: 0% 100%; animation-name: brand-leaf-in; animation-duration: 260ms; }
+  .brand-icon--animated .brand-node-left { animation-delay: 600ms; }
+  .brand-icon--animated .brand-node-right { animation-delay: 640ms; }
+  .brand-icon--animated .brand-node-tip { animation-delay: 680ms; }
 }
 
 @media (prefers-reduced-motion: reduce) {

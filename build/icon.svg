@@ -1,37 +1,35 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" fill="none">
   <defs>
     <linearGradient id="bluegum-background" x1="64" y1="24" x2="440" y2="512" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#2b5866"/>
-      <stop offset="1" stop-color="#0d2029"/>
+      <stop stop-color="#294f65"/>
+      <stop offset="1" stop-color="#0c2130"/>
     </linearGradient>
     <radialGradient id="bluegum-light" cx="0" cy="0" r="1" gradientTransform="translate(152 80) rotate(60) scale(440)" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#a9dfe8" stop-opacity=".16"/>
-      <stop offset="1" stop-color="#a9dfe8" stop-opacity="0"/>
+      <stop stop-color="#b8dfee" stop-opacity=".15"/>
+      <stop offset="1" stop-color="#b8dfee" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="bluegum-edge" x1="80" y1="8" x2="420" y2="504" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#c7eef4" stop-opacity=".28"/>
-      <stop offset="1" stop-color="#c7eef4" stop-opacity=".04"/>
+      <stop stop-color="#d2eaf3" stop-opacity=".3"/>
+      <stop offset="1" stop-color="#d2eaf3" stop-opacity=".05"/>
     </linearGradient>
-    <linearGradient id="bluegum-leaf" x1="-34" y1="0" x2="40" y2="-140" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#9fcdd6"/>
-      <stop offset="1" stop-color="#e2f4f6"/>
+    <linearGradient id="bluegum-leaf" x1="398" y1="116" x2="116" y2="374" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#e0f1f7"/>
+      <stop offset=".52" stop-color="#b7dfed"/>
+      <stop offset="1" stop-color="#83b7ce"/>
     </linearGradient>
   </defs>
   <rect x="8" y="8" width="496" height="496" rx="112" fill="url(#bluegum-background)"/>
   <rect x="8" y="8" width="496" height="496" rx="112" fill="url(#bluegum-light)"/>
   <rect x="10" y="10" width="492" height="492" rx="110" stroke="url(#bluegum-edge)" stroke-width="4"/>
-  <g stroke="#9fcdd6" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
-    <path class="brand-trunk" d="M256 368V160" pathLength="1"/>
-    <path class="brand-branch brand-branch-left" d="M256 302C256 254 152 274 152 210V192" pathLength="1"/>
-    <path class="brand-branch brand-branch-right" d="M256 256C256 208 360 228 360 164" pathLength="1"/>
+  <path class="brand-branch brand-branch-left" d="M96 394L128 362" stroke="#92c3d7" stroke-width="20" stroke-linecap="round" pathLength="1"/>
+  <path class="brand-node brand-node-top" d="M116 374C104 270 208 166 398 116C376 258 282 356 116 374Z" fill="url(#bluegum-leaf)"/>
+  <g stroke="#315e76" stroke-width="15" stroke-linecap="round" stroke-linejoin="round">
+    <path class="brand-trunk" d="M158 337C218 286 280 221 347 162" pathLength="1"/>
+    <path class="brand-branch brand-branch-right" d="M245 256C259 269 275 275 294 269" pathLength="1"/>
   </g>
-  <g transform="translate(256 170) rotate(16)">
-    <g class="brand-node brand-node-top">
-      <path d="M0 0C46 -30 52 -102 6 -146C-28 -104 -38 -40 0 0Z" fill="url(#bluegum-leaf)"/>
-      <path d="M2 -14C10 -54 12 -98 6 -132" stroke="#5f97a3" stroke-width="6" stroke-linecap="round"/>
-    </g>
+  <g fill="#d6edf6" stroke="#315e76" stroke-width="9">
+    <circle class="brand-node brand-node-left" cx="158" cy="337" r="14"/>
+    <circle class="brand-node brand-node-tip" cx="347" cy="162" r="14"/>
+    <circle class="brand-node brand-node-right" cx="294" cy="269" r="14"/>
   </g>
-  <circle class="brand-node brand-node-left" cx="152" cy="192" r="30" fill="#9fcdd6"/>
-  <circle class="brand-node brand-node-right" cx="360" cy="164" r="30" fill="#f0d488"/>
-  <circle class="brand-root" cx="256" cy="368" r="29" fill="#12303a" stroke="#9fcdd6" stroke-width="18"/>
 </svg>
