@@ -33,6 +33,7 @@ test('the branch and commit panels collapse from the toolbar, the View menu and 
     await page.getByRole('menubar', { name: 'Application menu' }).getByRole('menuitem', { name: 'View' }).click()
     await page.getByRole('menu', { name: 'View' }).getByRole('menuitem', { name: /Commit panel/ }).click()
     await expect(details).toBeVisible()
+    await expect(v).not.toHaveClass(/panels-moving/)
 
     const handle = (await v.locator('.splitter-sidebar').boundingBox())!
     await page.mouse.move(handle.x + 2, handle.y + 200)
