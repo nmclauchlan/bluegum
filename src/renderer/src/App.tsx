@@ -22,6 +22,7 @@ import { collectCommands, type Command } from './commands'
 import { CommandPalette } from './components/CommandPalette'
 import { Icon } from './components/Icon'
 import { Toast, type ToastState } from './components/Toast'
+import { useKeyboardShell } from './keynav'
 import { syncSettingsFromMain, useSettings } from './settings'
 import { BellIcon, failedBuildKey, NotificationsPanel, type FailedBuild, type RepoIncoming } from './components/Notifications'
 import {
@@ -65,6 +66,7 @@ export default function App(): React.JSX.Element {
   const toastId = useRef(0)
   const [menu, setMenu] = useState<MenuState | null>(null)
   const dialogs = useDialogs()
+  useKeyboardShell()
   const restored = useRef(false)
   const { backgroundFetch } = useSettings()
   const [incoming, setIncoming] = useState<Record<string, RepoIncoming>>({})
@@ -375,7 +377,13 @@ export default function App(): React.JSX.Element {
         const paths = await window.git.selectRepos()
         for (const p of paths) await openPath(p, p === paths[paths.length - 1])
       },
-      openMenu: (e, items) => setMenu({ x: e.clientX, y: e.clientY, items }),
+      openMenu: (e, items) => {
+        if (e.clientX || e.clientY || !(e.currentTarget instanceof HTMLElement)) setMenu({ x: e.clientX, y: e.clientY, items })
+        else {
+          const r = e.currentTarget.getBoundingClientRect()
+          setMenu({ x: r.left, y: r.bottom + 2, items })
+        }
+      },
       confirm: dialogs.confirm,
       prompt: dialogs.prompt,
       showError,

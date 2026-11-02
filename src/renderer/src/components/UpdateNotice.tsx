@@ -74,6 +74,8 @@ export function UpdateNotice(): React.JSX.Element | null {
       return (
         <span
           className="update-notice clickable"
+          role="button"
+          tabIndex={0}
           title="Restart Arbor to install the update"
           onClick={() => window.updater.install()}
         >
@@ -82,7 +84,7 @@ export function UpdateNotice(): React.JSX.Element | null {
       )
     case 'error':
       return (
-        <span className="update-notice error" title={status.message} onClick={() => window.updater.check()}>
+        <span className="update-notice error" role="button" tabIndex={0} title={status.message} onClick={() => window.updater.check()}>
           Update check failed
         </span>
       )

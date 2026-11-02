@@ -3,6 +3,7 @@ import { Loading } from './Spinner'
 import type { HostAccount, HostRepo } from '@shared/types'
 import { errorMessage, formatDate, hostName } from '../util'
 import { Icon } from './Icon'
+import { focusItem, listKeys, navItems, useRovingFocus } from '../keynav'
 
 const DIR_KEY = 'arbor.cloneDir'
 const PROTO_KEY = 'arbor.cloneProtocol'
@@ -40,6 +41,7 @@ export function CloneDialog({
 }): React.JSX.Element {
   const [accounts, setAccounts] = useState<HostAccount[] | null>(null)
   const [source, setSource] = useState<Source>({ kind: 'url' })
+  const cloneNav = useRovingFocus<HTMLDivElement>()
   const [repos, setRepos] = useState<Record<string, HostRepo[] | string>>({})
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<HostRepo | null>(null)
@@ -160,8 +162,19 @@ export function CloneDialog({
           />
         ) : (
           <>
-            <input autoFocus value={query} placeholder="Search repositories" spellCheck={false} onChange={(e) => setQuery(e.target.value)} />
-            <div className="clone-list">
+            <input
+              autoFocus
+              value={query}
+              placeholder="Search repositories"
+              spellCheck={false}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== 'ArrowDown' || !cloneNav.current) return
+                e.preventDefault()
+                focusItem(navItems(cloneNav.current)[0])
+              }}
+            />
+            <div className="clone-list" ref={cloneNav} role="listbox" aria-label="Repositories" onKeyDown={(e) => listKeys(e)}>
               {current === undefined && <Loading className="clone-empty" label="Loading repositories…" />}
               {typeof current === 'string' && <div className="clone-empty error-text">{current}</div>}
               {Array.isArray(current) && filtered.length === 0 && (
@@ -171,7 +184,11 @@ export function CloneDialog({
                 <div
                   key={r.fullName}
                   className={`clone-row${selected?.fullName === r.fullName ? ' selected' : ''}`}
+                  data-nav
+                  role="option"
+                  aria-selected={selected?.fullName === r.fullName}
                   onClick={() => setSelected(r)}
+                  onFocus={() => setSelected(r)}
                   onDoubleClick={() => {
                     setSelected(r)
                     if (parent) void clone()

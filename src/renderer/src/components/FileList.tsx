@@ -9,6 +9,7 @@ export function FileRow({
   onClick,
   onDoubleClick,
   onContextMenu,
+  onKeyDown,
   depth = 0,
   label,
   children
@@ -18,6 +19,7 @@ export function FileRow({
   onClick: (e: React.MouseEvent) => void
   onDoubleClick?: () => void
   onContextMenu?: (e: React.MouseEvent) => void
+  onKeyDown?: (e: React.KeyboardEvent) => void
   depth?: number
   label?: string
   children?: React.ReactNode
@@ -26,10 +28,16 @@ export function FileRow({
   return (
     <div
       className={`file-item${selected ? ' selected' : ''}`}
+      data-nav
+      data-path={file.path}
+      role="treeitem"
+      aria-level={depth + 1}
+      aria-selected={selected}
       style={{ paddingLeft: 12 + depth * 14 }}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
+      onKeyDown={onKeyDown}
       title={full}
     >
       <span className={`status-letter ${file.status}`}>{file.status}</span>
@@ -108,6 +116,7 @@ export function FileList({
   onSelect,
   onDoubleClick,
   onContextMenu,
+  onKeyDown,
   actions
 }: {
   files: StatusFile[]
@@ -115,6 +124,7 @@ export function FileList({
   onSelect: (f: StatusFile) => void
   onDoubleClick?: (f: StatusFile) => void
   onContextMenu?: (e: React.MouseEvent, files: StatusFile[], folder: string | null) => void
+  onKeyDown?: (e: React.KeyboardEvent, f: StatusFile) => void
   actions?: (f: StatusFile) => React.ReactNode
 }): React.JSX.Element {
   const view = useFileView()
@@ -145,6 +155,7 @@ export function FileList({
             onClick={(e) => e.detail < 2 && onSelect(f)}
             onDoubleClick={onDoubleClick ? () => onDoubleClick(f) : undefined}
             onContextMenu={onContextMenu ? (e) => onContextMenu(e, [f], null) : undefined}
+            onKeyDown={onKeyDown ? (e) => onKeyDown(e, f) : undefined}
           >
             {actions?.(f)}
           </FileRow>
@@ -161,6 +172,10 @@ export function FileList({
         <div
           key={'d:' + dir.path}
           className="dir-item"
+          data-nav
+          role="treeitem"
+          aria-level={depth + 1}
+          aria-expanded={open}
           style={{ paddingLeft: 12 + depth * 14 }}
           onClick={() => toggle(dir.path)}
           onContextMenu={onContextMenu ? (e) => onContextMenu(e, collectFiles(dir), dir.path) : undefined}
@@ -189,6 +204,7 @@ export function FileList({
           onClick={(e) => e.detail < 2 && onSelect(f)}
           onDoubleClick={onDoubleClick ? () => onDoubleClick(f) : undefined}
           onContextMenu={onContextMenu ? (e) => onContextMenu(e, [f], null) : undefined}
+          onKeyDown={onKeyDown ? (e) => onKeyDown(e, f) : undefined}
         >
           {actions?.(f)}
         </FileRow>

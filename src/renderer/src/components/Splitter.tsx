@@ -6,7 +6,8 @@ export function Splitter({
   onChange,
   invert,
   onReset,
-  className = ''
+  className = '',
+  label
 }: {
   direction: 'vertical' | 'horizontal'
   value: number
@@ -14,6 +15,7 @@ export function Splitter({
   invert?: boolean
   onReset?: () => void
   className?: string
+  label?: string
 }): React.JSX.Element {
   const start = useCallback(
     (e: React.MouseEvent) => {
@@ -37,5 +39,30 @@ export function Splitter({
     },
     [direction, value, onChange, invert]
   )
-  return <div className={`splitter ${direction} ${className}`.trim()} onMouseDown={start} onDoubleClick={onReset} />
+  const onKeyDown = (e: React.KeyboardEvent): void => {
+    const [less, more] = direction === 'vertical' ? ['ArrowLeft', 'ArrowRight'] : ['ArrowUp', 'ArrowDown']
+    const step = e.shiftKey ? 80 : 16
+    if (e.key === less || e.key === more) {
+      e.preventDefault()
+      e.stopPropagation()
+      const delta = (e.key === more ? step : -step) * (invert ? -1 : 1)
+      onChange(value + delta)
+    } else if (e.key === 'Enter' && onReset) {
+      e.preventDefault()
+      onReset()
+    }
+  }
+  return (
+    <div
+      className={`splitter ${direction} ${className}`.trim()}
+      role="separator"
+      aria-orientation={direction}
+      aria-label={label}
+      aria-valuenow={Math.round(value)}
+      tabIndex={0}
+      onMouseDown={start}
+      onDoubleClick={onReset}
+      onKeyDown={onKeyDown}
+    />
+  )
 }

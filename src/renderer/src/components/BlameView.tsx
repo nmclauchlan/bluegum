@@ -57,6 +57,8 @@ export function BlameView({
                 <td className="blame-age" style={{ opacity: 0.2 + age * 0.8 }} />
                 <td
                   className={`blame-info${uncommitted ? '' : ' link'}`}
+                  role={first && !uncommitted ? 'button' : undefined}
+                  tabIndex={first && !uncommitted ? 0 : undefined}
                   onClick={uncommitted ? undefined : () => onShowCommit(l.sha)}
                   title={c && !uncommitted ? `${c.summary}\n${c.author} · ${new Date(c.time).toLocaleString()} · ${shortHash(l.sha)}\nClick to show it in the graph` : undefined}
                 >

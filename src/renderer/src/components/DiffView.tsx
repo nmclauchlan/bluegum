@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { buildPatch, isPartiallyPatchable, parsePatch, type ParsedPatch } from '@shared/patch'
 import { Loading } from './Spinner'
 import { setDiffPrefs, useDiffPrefs } from '../diffPrefs'
@@ -168,13 +168,20 @@ export function DiffView({
   const actions = modes && onApply && isPartiallyPatchable(parsed) ? modes : []
   const [selected, setSelected] = useState<Set<string>>(() => new Set())
   const [anchor, setAnchor] = useState<string | null>(null)
+  const [cursor, setCursor] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [shownText, setShownText] = useState(text)
+  const root = useRef<HTMLDivElement>(null)
   if (shownText !== text) {
     setShownText(text)
     setSelected(new Set())
     setAnchor(null)
+    setCursor(null)
   }
+
+  useEffect(() => {
+    if (cursor) root.current?.querySelector('.cursor')?.scrollIntoView({ block: 'nearest' })
+  }, [cursor])
 
   const select = (key: string, range: boolean): void => {
     if (window.getSelection()?.toString()) return
@@ -202,12 +209,37 @@ export function DiffView({
     }
   }
 
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (!actions.length || !changeKeys.length || e.target !== e.currentTarget || e.altKey || e.ctrlKey || e.metaKey) return
+    const at = cursor ? changeKeys.indexOf(cursor) : -1
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      const next = changeKeys[at === -1 ? 0 : Math.max(0, Math.min(changeKeys.length - 1, at + (e.key === 'ArrowDown' ? 1 : -1)))]
+      if (e.shiftKey) {
+        setSelected((s) => new Set(s).add(cursor ?? next).add(next))
+        setAnchor(cursor ?? next)
+      }
+      setCursor(next)
+    } else if (e.key === ' ') {
+      e.preventDefault()
+      e.stopPropagation()
+      const key = cursor ?? changeKeys[0]
+      setCursor(key)
+      select(key, e.shiftKey)
+    } else if (e.key === 'Escape' && selected.size) {
+      e.preventDefault()
+      e.stopPropagation()
+      setSelected(new Set())
+    }
+  }
+
   const selectable = (l: Line | undefined): l is Line => !!l && l.kind !== 'ctx' && actions.length > 0
   const pick = (l: Line): { onMouseDown: (e: React.MouseEvent) => void; onClick: (e: React.MouseEvent) => void } => ({
     onMouseDown: (e) => e.shiftKey && e.preventDefault(),
     onClick: (e) => select(lineKey(l.hunk, l.line), e.shiftKey)
   })
   const isSelected = (l: Line | undefined): boolean => !!l && l.kind !== 'ctx' && selected.has(lineKey(l.hunk, l.line))
+  const atCursor = (l: Line | undefined): boolean => !!l && l.kind !== 'ctx' && cursor === lineKey(l.hunk, l.line)
 
   const hunkHeader = (h: HunkView, span: number): React.JSX.Element => (
     <tr key={`h${h.index}`} className="hunk">
@@ -232,7 +264,14 @@ export function DiffView({
   if (loading) return <div className="diff"><Loading className="placeholder" /></div>
   if (!text.trim()) return <div className="diff"><div className="placeholder">{empty ?? 'No changes'}</div></div>
   return (
-    <div className={`diff${actions.length ? ' patchable' : ''}${split ? ' split' : ''}${wrap && !split ? ' wrap' : ''}`}>
+    <div
+      ref={root}
+      className={`diff${actions.length ? ' patchable' : ''}${split ? ' split' : ''}${wrap && !split ? ' wrap' : ''}`}
+      tabIndex={0}
+      data-entry
+      aria-label={actions.length ? 'Diff. Up and Down move between changed lines, Space selects one, Shift+Up or Down extends the selection' : 'Diff'}
+      onKeyDown={onKeyDown}
+    >
       <div className="diff-bar">
         {selected.size > 0 ? (
           <div className="diff-selection" role="toolbar" aria-label="Selected lines">
@@ -305,7 +344,7 @@ export function DiffView({
               }
               const side = (l: Line | undefined, which: 'left' | 'right'): React.JSX.Element[] => {
                 const no = which === 'left' ? l?.oldNo : l?.newNo
-                const cls = `${l ? l.kind : 'empty'}${selectable(l) ? ' selectable' : ''}${isSelected(l) ? ' selected' : ''}`
+                const cls = `${l ? l.kind : 'empty'}${selectable(l) ? ' selectable' : ''}${isSelected(l) ? ' selected' : ''}${atCursor(l) ? ' cursor' : ''}`
                 const handlers = selectable(l) ? pick(l) : {}
                 return [
                   <td key={`${which}-ln`} className={`ln ${cls}`} title={selectable(l) ? SELECT_HINT : undefined} {...handlers}>
@@ -351,7 +390,7 @@ export function DiffView({
                 return (
                   <tr
                     key={`${h.index}-${i}`}
-                    className={`${it.kind}${can ? ' selectable' : ''}${isSelected(it) ? ' selected' : ''}`}
+                    className={`${it.kind}${can ? ' selectable' : ''}${isSelected(it) ? ' selected' : ''}${atCursor(it) ? ' cursor' : ''}`}
                     {...(can ? pick(it) : {})}
                   >
                     <td className="ln" title={can ? SELECT_HINT : undefined}>{it.oldNo ?? ''}</td>

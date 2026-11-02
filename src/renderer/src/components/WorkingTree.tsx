@@ -6,10 +6,17 @@ import { FileList, FileViewToggle } from './FileList'
 import { canEdit, type FileViewRequest } from './FileViewer'
 import { copyToClipboard, errorMessage, revealInFolder, revealLabel } from '../util'
 import { Icon } from './Icon'
+import { focusItem, listKeys, useRovingFocus } from '../keynav'
 
 type Area = 'staged' | 'unstaged'
 
 const SUMMARY_LIMIT = 72
+
+function siblingRow(row: HTMLElement, dir: 1 | -1): HTMLElement | undefined {
+  for (let el = dir > 0 ? row.nextElementSibling : row.previousElementSibling; el; el = dir > 0 ? el.nextElementSibling : el.previousElementSibling) {
+    if (el instanceof HTMLElement && el.matches('.file-item')) return el
+  }
+}
 const FAILED: Record<string, string> = { commit: 'Commit failed', stage: 'Staging failed', unstage: 'Unstaging failed', discard: 'Discarding failed', abort: 'Abort failed', continue: 'Continuing failed' }
 
 export function WorkingTree({
@@ -36,6 +43,8 @@ export function WorkingTree({
   const [amendPrefill, setAmendPrefill] = useState<string | null>(null)
   const descriptionRef = useRef<HTMLTextAreaElement>(null)
   const spaceQueue = useRef<Promise<void>>(Promise.resolve())
+  const filesNav = useRovingFocus<HTMLDivElement>()
+  const pendingFocus = useRef<{ area: Area; path: string } | null>(null)
   const message = description.trim() ? `${summary.trim()}\n\n${description.trim()}` : summary.trim()
   const setMessage = (text: string): void => {
     const [first = '', ...rest] = text.split('\n')
@@ -89,6 +98,15 @@ export function WorkingTree({
     if (!list.some((f) => f.path === viewing.file.path)) onView(null)
   }, [status, viewing, onView])
 
+  useEffect(() => {
+    const want = pendingFocus.current
+    if (!want) return
+    const row = filesNav.current?.querySelector<HTMLElement>(`[data-area="${want.area}"] [data-path="${CSS.escape(want.path)}"]`)
+    if (!row) return
+    pendingFocus.current = null
+    focusItem(row)
+  }, [status, filesNav])
+
   const run = async (fn: () => Promise<void>, key = 'action'): Promise<void> => {
     setWorking(key)
     try {
@@ -103,13 +121,14 @@ export function WorkingTree({
 
   const stage = (files: string[], key = 'stage'): Promise<void> => run(() => window.git.stage(repoPath, files), key)
   const unstage = (files: string[], key = 'unstage'): Promise<void> => run(() => window.git.unstage(repoPath, files), key)
-  const discard = async (files: string[]): Promise<void> => {
+  const discard = async (files: string[]): Promise<boolean> => {
     const ok = await actions.confirm(
       'Discard changes',
       `Discard changes to ${files.length === 1 ? files[0] : `${files.length} files`}? This cannot be undone.`,
       true
     )
     if (ok) await run(() => window.git.discard(repoPath, files), 'discard')
+    return ok
   }
 
   const commit = async (): Promise<void> => {
@@ -147,6 +166,31 @@ export function WorkingTree({
     if (open) onView(null)
     else view(area, file, mode)
   }
+
+  const rowKeys =
+    (area: Area) =>
+    (e: React.KeyboardEvent, file: StatusFile): void => {
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || (e.key !== ' ' && e.key !== 'Delete')) return
+      if (e.key === 'Delete' && area !== 'unstaged') return
+      e.preventDefault()
+      e.stopPropagation()
+      const row = e.currentTarget as HTMLElement
+      const next = siblingRow(row, 1) ?? siblingRow(row, -1)
+      if (e.key === 'Delete') {
+        void discard([file.path]).then((ok) => ok && next?.isConnected && focusItem(next))
+        return
+      }
+      if (next) focusItem(next)
+      else pendingFocus.current = { area: area === 'staged' ? 'unstaged' : 'staged', path: file.path }
+      const list = area === 'staged' ? status.staged : unstagedFiles
+      if (selectedIn(area) === file.path) {
+        const after = list.find((f) => f.path === next?.dataset.path)
+        if (after) view(area, after, 'diff')
+        else onView(null)
+      }
+      const task = (): Promise<void> => (area === 'staged' ? unstage : stage)([file.path])
+      spaceQueue.current = spaceQueue.current.then(task, task)
+    }
 
   const resolveWith = (file: StatusFile, side: 'ours' | 'theirs'): Promise<void> =>
     run(() => window.git.resolveFile(repoPath, file.path, null, side))
@@ -271,28 +315,30 @@ export function WorkingTree({
           </button>
         </div>
       )}
-      <div className="panel-body">
+      <div className="panel-body" ref={filesNav} role="tree" aria-label="Uncommitted changes" onKeyDown={(e) => listKeys(e)}>
         {conflictFiles.length > 0 && (
           <>
             <div className="file-group-title conflicts">
               <span>Conflicts ({conflictFiles.length})</span>
             </div>
-            <FileList
-              files={conflictFiles}
-              selectedPath={selectedIn('unstaged')}
-              onSelect={(f) => toggle('unstaged', f, 'conflict')}
-              onDoubleClick={(f) => view('unstaged', f, 'conflict')}
-              onContextMenu={fileMenu('conflict')}
-              actions={(f) => (
-                <span className="actions" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
-                  <button title="Resolve in editor" aria-label="Resolve in editor" onClick={() => view('unstaged', f, 'conflict')}>
-                    <Icon name="conflict" size={14} />
-                  </button>
-                  <button title="Take ours" onClick={() => resolveWith(f, 'ours')}>Ours</button>
-                  <button title="Take theirs" onClick={() => resolveWith(f, 'theirs')}>Theirs</button>
-                </span>
-              )}
-            />
+            <div data-area="conflicts">
+              <FileList
+                files={conflictFiles}
+                selectedPath={selectedIn('unstaged')}
+                onSelect={(f) => toggle('unstaged', f, 'conflict')}
+                onDoubleClick={(f) => view('unstaged', f, 'conflict')}
+                onContextMenu={fileMenu('conflict')}
+                actions={(f) => (
+                  <span className="actions" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+                    <button title="Resolve in editor" aria-label="Resolve in editor" onClick={() => view('unstaged', f, 'conflict')}>
+                      <Icon name="conflict" size={14} />
+                    </button>
+                    <button title="Take ours" onClick={() => resolveWith(f, 'ours')}>Ours</button>
+                    <button title="Take theirs" onClick={() => resolveWith(f, 'theirs')}>Theirs</button>
+                  </span>
+                )}
+              />
+            </div>
           </>
         )}
         <div className="file-group-title">
@@ -301,53 +347,59 @@ export function WorkingTree({
             Stage all
           </button>
         </div>
-        <FileList
-          files={unstagedFiles}
-          selectedPath={selectedIn('unstaged')}
-          onSelect={(f) => toggle('unstaged', f, 'diff')}
-          onDoubleClick={(f) => void stage([f.path])}
-          onContextMenu={fileMenu('unstaged')}
-          actions={(f) => (
-            <span className="actions" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
-              {canEdit(f) && (
-                <button title="Edit" aria-label="Edit" onClick={() => view('unstaged', f, 'edit')}>
-                  <Icon name="edit" size={14} />
+        <div data-area="unstaged">
+          <FileList
+            files={unstagedFiles}
+            selectedPath={selectedIn('unstaged')}
+            onSelect={(f) => toggle('unstaged', f, 'diff')}
+            onDoubleClick={(f) => void stage([f.path])}
+            onContextMenu={fileMenu('unstaged')}
+            onKeyDown={rowKeys('unstaged')}
+            actions={(f) => (
+              <span className="actions" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+                {canEdit(f) && (
+                  <button title="Edit" aria-label="Edit" onClick={() => view('unstaged', f, 'edit')}>
+                    <Icon name="edit" size={14} />
+                  </button>
+                )}
+                <button title="Discard" aria-label="Discard" onClick={() => discard([f.path])}>
+                  <Icon name="undo" size={14} />
                 </button>
-              )}
-              <button title="Discard" aria-label="Discard" onClick={() => discard([f.path])}>
-                <Icon name="undo" size={14} />
-              </button>
-              <button title="Stage" aria-label="Stage" onClick={() => stage([f.path])}>
-                <Icon name="plus" size={14} />
-              </button>
-            </span>
-          )}
-        />
+                <button title="Stage" aria-label="Stage" onClick={() => stage([f.path])}>
+                  <Icon name="plus" size={14} />
+                </button>
+              </span>
+            )}
+          />
+        </div>
         <div className="file-group-title">
           <span>Staged ({status.staged.length})</span>
           <button disabled={!!working || !status.staged.length} aria-busy={working === 'unstage-all'} onClick={() => unstage(stagedPaths, 'unstage-all')}>
             Unstage all
           </button>
         </div>
-        <FileList
-          files={status.staged}
-          selectedPath={selectedIn('staged')}
-          onSelect={(f) => toggle('staged', f, 'diff')}
-          onDoubleClick={(f) => void unstage([f.path])}
-          onContextMenu={fileMenu('staged')}
-          actions={(f) => (
-            <span className="actions" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
-              {canEdit(f) && (
-                <button title="Edit" aria-label="Edit" onClick={() => view('staged', f, 'edit')}>
-                  <Icon name="edit" size={14} />
+        <div data-area="staged">
+          <FileList
+            files={status.staged}
+            selectedPath={selectedIn('staged')}
+            onSelect={(f) => toggle('staged', f, 'diff')}
+            onDoubleClick={(f) => void unstage([f.path])}
+            onContextMenu={fileMenu('staged')}
+            onKeyDown={rowKeys('staged')}
+            actions={(f) => (
+              <span className="actions" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+                {canEdit(f) && (
+                  <button title="Edit" aria-label="Edit" onClick={() => view('staged', f, 'edit')}>
+                    <Icon name="edit" size={14} />
+                  </button>
+                )}
+                <button title="Unstage" aria-label="Unstage" onClick={() => unstage([f.path])}>
+                  <Icon name="minus" size={14} />
                 </button>
-              )}
-              <button title="Unstage" aria-label="Unstage" onClick={() => unstage([f.path])}>
-                <Icon name="minus" size={14} />
-              </button>
-            </span>
-          )}
-        />
+              </span>
+            )}
+          />
+        </div>
       </div>
       <div className="commit-form">
         <div className="commit-summary">

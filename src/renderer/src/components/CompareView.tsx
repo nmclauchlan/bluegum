@@ -24,7 +24,7 @@ function CommitGroup({ title, commits, onShowCommit }: { title: string; commits:
         </span>
       </div>
       {commits.map((c) => (
-        <div key={c.hash} className="file-history-item" onClick={() => onShowCommit(c.hash)} title="Show this commit in the graph">
+        <div key={c.hash} className="file-history-item" role="button" tabIndex={0} onClick={() => onShowCommit(c.hash)} title="Show this commit in the graph">
           <div className="subject">{c.subject}</div>
           <div className="meta">
             <span className="author">{c.author}</span>

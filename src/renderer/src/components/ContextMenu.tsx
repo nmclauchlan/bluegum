@@ -34,43 +34,104 @@ function compact(items: MenuItem[]): MenuItem[] {
   return out
 }
 
-function MenuList({ items, onClose, nested }: { items: MenuItem[]; onClose: () => void; nested?: boolean }): React.JSX.Element {
-  const [openSub, setOpenSub] = useState<number | null>(null)
+function MenuList({
+  items,
+  onClose,
+  nested,
+  autoFocus,
+  onBack
+}: {
+  items: MenuItem[]
+  onClose: () => void
+  nested?: boolean
+  autoFocus?: boolean
+  onBack?: () => void
+}): React.JSX.Element {
+  const [openSub, setOpenSub] = useState<{ index: number; focus: boolean } | null>(null)
   const timer = useRef<number | undefined>(undefined)
+  const menu = useRef<HTMLDivElement>(null)
   const list = compact(items)
   const ticks = list.some((i) => i.checked !== undefined)
   const icons = !ticks && list.some((i) => i.icon)
 
+  const enabled = (): HTMLElement[] => [...(menu.current?.querySelectorAll<HTMLElement>(':scope > [role^="menuitem"]:not([aria-disabled])') ?? [])]
+
   useEffect(() => () => window.clearTimeout(timer.current), [])
+  useEffect(() => {
+    if (!autoFocus) return
+    const id = requestAnimationFrame(() => enabled()[0]?.focus({ preventScroll: true }))
+    return () => cancelAnimationFrame(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const hover = (i: number, hasSub: boolean): void => {
     window.clearTimeout(timer.current)
-    timer.current = window.setTimeout(() => setOpenSub(hasSub ? i : null), hasSub ? 80 : 150)
+    timer.current = window.setTimeout(() => setOpenSub(hasSub ? { index: i, focus: false } : null), hasSub ? 80 : 150)
+  }
+
+  const activate = (item: MenuItem, i: number, focus: boolean): void => {
+    if (item.disabled) return
+    if (item.items) {
+      window.clearTimeout(timer.current)
+      setOpenSub({ index: i, focus })
+      return
+    }
+    onClose()
+    item.onClick?.()
+  }
+
+  const onKeyDown = (e: React.KeyboardEvent): void => {
+    e.stopPropagation()
+    const items = enabled()
+    const at = items.indexOf(document.activeElement as HTMLElement)
+    const index = at === -1 ? -1 : Number(items[at].dataset.index)
+    const move = (to: number): void => {
+      e.preventDefault()
+      items[(to + items.length) % items.length]?.focus({ preventScroll: true })
+    }
+    if (e.key === 'ArrowDown') move(at + 1)
+    else if (e.key === 'ArrowUp') move(at === -1 ? -1 : at - 1)
+    else if (e.key === 'Home') move(0)
+    else if (e.key === 'End') move(-1)
+    else if (e.key === 'Enter' || e.key === ' ' || (e.key === 'ArrowRight' && list[index]?.items)) {
+      e.preventDefault()
+      if (index !== -1) activate(list[index], index, true)
+    } else if (e.key === 'ArrowLeft' || e.key === 'Escape') {
+      e.preventDefault()
+      if (nested) onBack?.()
+      else if (e.key === 'Escape') onClose()
+    } else if (e.key === 'Tab') {
+      e.preventDefault()
+      onClose()
+    } else if (e.key.length === 1 && /\S/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const ch = e.key.toLowerCase()
+      const order = [...items.slice(at + 1), ...items.slice(0, at + 1)]
+      const match = order.find((el) => (el.querySelector('.label')?.textContent ?? '').trim().toLowerCase().startsWith(ch))
+      if (match) move(items.indexOf(match))
+    }
   }
 
   return (
-    <div className={`context-menu${nested ? ' nested' : ''}`} role="menu" onMouseDown={(e) => e.stopPropagation()}>
+    <div ref={menu} className={`context-menu${nested ? ' nested' : ''}`} role="menu" onMouseDown={(e) => e.stopPropagation()} onKeyDown={onKeyDown}>
       {list.map((item, i) =>
         item.separator ? (
           <div key={i} className="sep" role="separator" />
         ) : (
           <div
             key={i}
+            data-index={i}
+            tabIndex={-1}
             role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
             aria-checked={item.checked}
             aria-haspopup={item.items ? 'menu' : undefined}
-            aria-expanded={item.items ? openSub === i : undefined}
+            aria-expanded={item.items ? openSub?.index === i : undefined}
             aria-disabled={item.disabled || undefined}
-            className={`item${item.danger ? ' danger' : ''}${item.disabled ? ' disabled' : ''}${item.items ? ' has-sub' : ''}${openSub === i ? ' sub-open' : ''}`}
-            onMouseEnter={() => hover(i, !!item.items)}
-            onClick={() => {
-              if (item.items) {
-                setOpenSub(i)
-                return
-              }
-              onClose()
-              item.onClick?.()
+            className={`item${item.danger ? ' danger' : ''}${item.disabled ? ' disabled' : ''}${item.items ? ' has-sub' : ''}${openSub?.index === i ? ' sub-open' : ''}`}
+            onMouseEnter={(e) => {
+              if (!item.disabled) e.currentTarget.focus({ preventScroll: true })
+              hover(i, !!item.items)
             }}
+            onClick={() => activate(item, i, false)}
           >
             {ticks && (
               <span className="check" aria-hidden="true">
@@ -85,7 +146,18 @@ function MenuList({ items, onClose, nested }: { items: MenuItem[]; onClose: () =
                 <Icon name="chevronRight" size={12} />
               </span>
             )}
-            {item.items && openSub === i && <Submenu items={item.items} onClose={onClose} index={i} />}
+            {item.items && openSub?.index === i && (
+              <Submenu
+                items={item.items}
+                onClose={onClose}
+                index={i}
+                autoFocus={openSub.focus}
+                onBack={() => {
+                  setOpenSub(null)
+                  menu.current?.querySelector<HTMLElement>(`:scope > [data-index="${i}"]`)?.focus({ preventScroll: true })
+                }}
+              />
+            )}
           </div>
         )
       )}
@@ -93,7 +165,19 @@ function MenuList({ items, onClose, nested }: { items: MenuItem[]; onClose: () =
   )
 }
 
-function Submenu({ items, onClose, index }: { items: MenuItem[]; onClose: () => void; index: number }): React.JSX.Element | null {
+function Submenu({
+  items,
+  onClose,
+  index,
+  autoFocus,
+  onBack
+}: {
+  items: MenuItem[]
+  onClose: () => void
+  index: number
+  autoFocus: boolean
+  onBack: () => void
+}): React.JSX.Element | null {
   const layer = useContext(LayerContext)
   const anchor = useRef<HTMLSpanElement>(null)
   const ref = useRef<HTMLDivElement>(null)
@@ -123,7 +207,7 @@ function Submenu({ items, onClose, index }: { items: MenuItem[]; onClose: () => 
             style={{ left: pos?.left ?? -9999, top: pos?.top ?? 0, visibility: pos ? 'visible' : 'hidden' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <MenuList items={items} onClose={onClose} nested />
+            <MenuList items={items} onClose={onClose} nested autoFocus={autoFocus} onBack={onBack} />
           </div>,
           layer
         )}
@@ -143,6 +227,15 @@ export function ContextMenu({ menu, onClose }: { menu: MenuState | null; onClose
     const x = Math.max(4, Math.min(menu.x, window.innerWidth - rect.width - 4))
     const y = Math.max(4, Math.min(menu.above ? menu.y - rect.height - 4 : menu.y, window.innerHeight - rect.height - 4))
     setPos({ x, y })
+  }, [menu])
+
+  useLayoutEffect(() => {
+    if (!menu) return
+    const returnTo = document.activeElement as HTMLElement | null
+    return () => {
+      const now = document.activeElement
+      if (returnTo?.isConnected && (!now || now === document.body || !now.isConnected || now.closest('.context-menu-root, .context-menu-layer'))) returnTo.focus({ preventScroll: true })
+    }
   }, [menu])
 
   useEffect(() => {
@@ -166,7 +259,7 @@ export function ContextMenu({ menu, onClose }: { menu: MenuState | null; onClose
     <>
       <div ref={ref} className="context-menu-root" style={{ left: pos.x, top: pos.y }}>
         <LayerContext.Provider value={layer}>
-          <MenuList items={menu.items} onClose={onClose} />
+          <MenuList key={`${menu.x},${menu.y}`} items={menu.items} onClose={onClose} autoFocus />
         </LayerContext.Provider>
       </div>
       <div ref={setLayer} className="context-menu-layer" onMouseDown={(e) => e.stopPropagation()} />

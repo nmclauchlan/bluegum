@@ -8,6 +8,7 @@ import { canEdit, type FileViewRequest } from './FileViewer'
 import { copyToClipboard, formatFullDate, revealInFolder, revealLabel, shortHash } from '../util'
 import type { Shell } from '../actions'
 import { Icon } from './Icon'
+import { listKeys, useRovingFocus } from '../keynav'
 
 export function CommitPanel({
   repoPath,
@@ -28,6 +29,7 @@ export function CommitPanel({
 }): React.JSX.Element {
   const [details, setDetails] = useState<CommitDetails | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const filesNav = useRovingFocus<HTMLDivElement>()
 
   useEffect(() => {
     let cancelled = false
@@ -76,42 +78,44 @@ export function CommitPanel({
           <span>{details.files.length} file{details.files.length === 1 ? '' : 's'} changed</span>
           <FileViewToggle />
         </div>
-        <FileList
-          files={details.files}
-          selectedPath={selected}
-          onSelect={(f) => (viewing?.source.kind === 'commit' && viewing.source.hash === hash && viewing.file.path === f.path ? onView(null) : view(f, 'diff'))}
-          onDoubleClick={(f) => view(f, 'edit')}
-          onContextMenu={(e, files, folder) => {
-            e.preventDefault()
-            const target = folder ?? files[0].path
-            shell.openMenu(e, [
-              ...(!folder && canEdit(files[0]) ? [{ label: 'Edit working copy', onClick: () => view(files[0], 'edit') }] : []),
-              ...(!folder
-                ? [
-                    { label: 'File history', onClick: () => view(files[0], 'history') },
-                    ...(canEdit(files[0]) ? [{ label: 'Blame', onClick: () => view(files[0], 'blame') }] : [])
-                  ]
-                : []),
-              { label: revealLabel(), onClick: () => revealInFolder(repoPath, target) },
-              {
-                label: 'Copy path',
-                onClick: () => {
-                  void copyToClipboard(target)
-                  shell.showInfo(`Copied ${target}`)
+        <div ref={filesNav} role="tree" aria-label="Changed files" onKeyDown={(e) => listKeys(e)}>
+          <FileList
+            files={details.files}
+            selectedPath={selected}
+            onSelect={(f) => (viewing?.source.kind === 'commit' && viewing.source.hash === hash && viewing.file.path === f.path ? onView(null) : view(f, 'diff'))}
+            onDoubleClick={(f) => view(f, 'edit')}
+            onContextMenu={(e, files, folder) => {
+              e.preventDefault()
+              const target = folder ?? files[0].path
+              shell.openMenu(e, [
+                ...(!folder && canEdit(files[0]) ? [{ label: 'Edit working copy', onClick: () => view(files[0], 'edit') }] : []),
+                ...(!folder
+                  ? [
+                      { label: 'File history', onClick: () => view(files[0], 'history') },
+                      ...(canEdit(files[0]) ? [{ label: 'Blame', onClick: () => view(files[0], 'blame') }] : [])
+                    ]
+                  : []),
+                { label: revealLabel(), onClick: () => revealInFolder(repoPath, target) },
+                {
+                  label: 'Copy path',
+                  onClick: () => {
+                    void copyToClipboard(target)
+                    shell.showInfo(`Copied ${target}`)
+                  }
                 }
-              }
-            ])
-          }}
-          actions={(f) =>
-            canEdit(f) ? (
-              <span className="actions" onClick={(e) => e.stopPropagation()}>
-                <button title="Edit working copy" aria-label="Edit working copy" onClick={() => view(f, 'edit')}>
-                  <Icon name="edit" size={14} />
-                </button>
-              </span>
-            ) : null
-          }
-        />
+              ])
+            }}
+            actions={(f) =>
+              canEdit(f) ? (
+                <span className="actions" onClick={(e) => e.stopPropagation()}>
+                  <button title="Edit working copy" aria-label="Edit working copy" onClick={() => view(f, 'edit')}>
+                    <Icon name="edit" size={14} />
+                  </button>
+                </span>
+              ) : null
+            }
+          />
+        </div>
       </div>
     </div>
   )

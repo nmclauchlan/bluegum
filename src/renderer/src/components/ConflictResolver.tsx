@@ -19,7 +19,7 @@ function Context({ lines }: { lines: string[] }): React.JSX.Element {
     <div className="conflict-context">
       {shown.map((l, i) =>
         l === null ? (
-          <div key={i} className="conflict-fold" onClick={() => setExpanded(true)}>
+          <div key={i} className="conflict-fold" role="button" tabIndex={0} onClick={() => setExpanded(true)}>
             ⋯ {lines.length - CONTEXT_LINES * 2} unchanged lines
           </div>
         ) : (

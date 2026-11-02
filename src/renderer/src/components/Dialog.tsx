@@ -55,7 +55,7 @@ function DialogView({
   useEffect(() => {
     const key = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') cancel()
-      if (e.key === 'Enter') ok()
+      if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement)) ok()
     }
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)
@@ -63,7 +63,7 @@ function DialogView({
 
   return (
     <div className="overlay" onMouseDown={cancel}>
-      <div className="dialog" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="dialog" role={state.kind === 'confirm' ? 'alertdialog' : 'dialog'} aria-label={state.title} onMouseDown={(e) => e.stopPropagation()}>
         <h3>{state.title}</h3>
         {state.kind === 'prompt' ? (
           <>
@@ -79,7 +79,7 @@ function DialogView({
         )}
         <div className="buttons">
           <button onClick={cancel}>Cancel</button>
-          <button className={state.kind === 'confirm' && state.danger ? 'danger' : 'primary'} onClick={ok}>
+          <button className={state.kind === 'confirm' && state.danger ? 'danger' : 'primary'} autoFocus={state.kind === 'confirm'} onClick={ok}>
             OK
           </button>
         </div>

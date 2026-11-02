@@ -3,10 +3,12 @@ import type { FileHistoryEntry } from '@shared/types'
 import { DiffView } from './DiffView'
 import { Loading } from './Spinner'
 import { errorMessage, formatDate, shortHash } from '../util'
+import { listKeys, useRovingFocus } from '../keynav'
 
 export function FileHistory({ repoPath, file, onShowCommit }: { repoPath: string; file: string; onShowCommit: (hash: string) => void }): React.JSX.Element {
   const [entries, setEntries] = useState<FileHistoryEntry[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const historyNav = useRovingFocus<HTMLDivElement>()
   const [selected, setSelected] = useState<FileHistoryEntry | null>(null)
   const [diff, setDiff] = useState('')
   const [loadingDiff, setLoadingDiff] = useState(false)
@@ -52,7 +54,7 @@ export function FileHistory({ repoPath, file, onShowCommit }: { repoPath: string
 
   return (
     <div className="file-history">
-      <div className="file-history-list" role="listbox" aria-label="Commits that changed this file">
+      <div className="file-history-list" ref={historyNav} role="listbox" aria-label="Commits that changed this file" onKeyDown={(e) => listKeys(e)}>
         <div className="file-history-count">
           {entries.length}
           {entries.length >= 500 ? '+' : ''} commit{entries.length === 1 ? '' : 's'}
@@ -62,8 +64,10 @@ export function FileHistory({ repoPath, file, onShowCommit }: { repoPath: string
             key={e.hash}
             role="option"
             aria-selected={selected?.hash === e.hash}
+            data-nav
             className={`file-history-item${selected?.hash === e.hash ? ' selected' : ''}`}
             onClick={() => setSelected(e)}
+            onFocus={() => setSelected(e)}
             onDoubleClick={() => onShowCommit(e.hash)}
             title={`${e.subject}\n${e.author} · ${new Date(e.date).toLocaleString()}\nDouble-click to show it in the graph`}
           >

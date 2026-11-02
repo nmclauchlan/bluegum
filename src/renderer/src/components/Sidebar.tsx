@@ -7,6 +7,7 @@ import { BuildMarker, buildsFor } from './BuildStatus'
 import { hostName, hostPath, prNoun, prPrefix } from '../util'
 import { setPanelCollapsed } from '../layout'
 import { Icon } from './Icon'
+import { focusItem, listKeys, navItems, useRovingFocus } from '../keynav'
 
 const TAG_LIMIT = 10
 
@@ -25,7 +26,7 @@ function Section({
   const shown = open || forceOpen
   return (
     <div>
-      <div className="section-title" onClick={() => setOpen(!open)}>
+      <div className="section-title" data-nav role="treeitem" aria-level={1} aria-expanded={shown} onClick={() => setOpen(!open)}>
         <span>
           <Icon name={shown ? 'chevronDown' : 'chevronRight'} size={12} />
           {title}
@@ -80,6 +81,7 @@ export function Sidebar({
   const [query, setQuery] = useState('')
   const [allTags, setAllTags] = useState(false)
   const input = useRef<HTMLInputElement>(null)
+  const tree = useRovingFocus<HTMLDivElement>()
   const q = query.trim().toLowerCase()
   const matches = (name: string): boolean => !q || name.toLowerCase().includes(q)
 
@@ -144,6 +146,9 @@ export function Sidebar({
     if (e.key === 'Escape') {
       setQuery('')
       input.current?.blur()
+    } else if (e.key === 'ArrowDown' && tree.current) {
+      e.preventDefault()
+      focusItem(navItems(tree.current)[0])
     } else if (e.key === 'Enter' && q) {
       const first = branches.find((b) => !b.current) ?? branches[0]
       const remote = remotes[0]
@@ -173,131 +178,149 @@ export function Sidebar({
         )}
       </div>
       {filtering && total === 0 && <div className="empty">No matches for “{query}”</div>}
-      <Section title="Local" count={branches.length} forceOpen={filtering}>
-        {branches.map((b) => (
-          <div
-            key={b.name}
-            className={`ref-item${b.current ? ' current' : ''}`}
-            title={b.name}
-            onClick={() => actions.selectHash(b.hash)}
-            onDoubleClick={() => !b.current && actions.checkout(b.name)}
-            onContextMenu={(e) => branchMenu(e, b)}
-          >
-            <span className="name"><Highlight text={b.name} query={q} /></span>
-            {prByBranch.has(b.name) && (
-              <span
-                className="pr-pill"
-                title={prByBranch.get(b.name)!.title}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onSelectPr(prByBranch.get(b.name)!)
-                }}
-              >
-                {prPrefix(host?.kind ?? 'azure')}{prByBranch.get(b.name)!.id}
-              </span>
-            )}
-            {(b.ahead || b.behind) ? (
-              <span className="track">
-                {b.ahead ? `↑${b.ahead}` : ''} {b.behind ? `↓${b.behind}` : ''}
-              </span>
-            ) : null}
-            {builds[b.hash] && <BuildMarker builds={builds[b.hash]} />}
-          </div>
-        ))}
-        {branches.length === 0 && !filtering && <div className="empty">No branches</div>}
-      </Section>
-      {host && (
-        <Section title={host.kind === 'gitlab' ? 'Merge requests' : 'Pull requests'} count={hasAccount ? shownPrs.length : 0} forceOpen={filtering}>
-          {!hasAccount ? (
-            <div className="connect-row">
-              <button onClick={() => actions.openSettings(host.baseUrl)}>Connect to {hostName(host.kind)}</button>
-              <small className="muted">{hostPath(host)}</small>
-            </div>
-          ) : (
-            <>
-              {!prsLoaded && <Loading className="empty" label={`Loading ${prNoun(host.kind)}s…`} />}
-              {prError && <div className="empty error-text" title={prError}>{prError}</div>}
-              {shownPrs.map((p) => (
-                <div
-                  key={p.id}
-                  className={`ref-item pr-item${selectedPr === p.id ? ' current' : ''}`}
-                  title={`${prPrefix(host.kind)}${p.id} ${p.title}\n${p.sourceBranch} → ${p.targetBranch}`}
-                  onClick={() => onSelectPr(p)}
-                  onDoubleClick={() => actions.checkout(p.sourceBranch)}
+      <div ref={tree} role="tree" aria-label="Branches, tags and stashes" onKeyDown={(e) => listKeys(e)}>
+        <Section title="Local" count={branches.length} forceOpen={filtering}>
+          {branches.map((b) => (
+            <div
+              key={b.name}
+              className={`ref-item${b.current ? ' current' : ''}`}
+              data-nav
+              role="treeitem"
+              aria-level={2}
+              aria-current={b.current || undefined}
+              title={b.name}
+              onClick={() => actions.selectHash(b.hash)}
+              onDoubleClick={() => !b.current && actions.checkout(b.name)}
+              onContextMenu={(e) => branchMenu(e, b)}
+            >
+              <span className="name"><Highlight text={b.name} query={q} /></span>
+              {prByBranch.has(b.name) && (
+                <span
+                  className="pr-pill"
+                  title={prByBranch.get(b.name)!.title}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onSelectPr(prByBranch.get(b.name)!)
+                  }}
                 >
-                  <span className="pr-id">{prPrefix(host.kind)}{p.id}</span>
-                  <span className="name">{p.isDraft ? '[Draft] ' : ''}<Highlight text={p.title} query={q} /></span>
-                  <BuildMarker builds={buildsFor(builds, p.headSha, p.mergeSha)} />
+                  {prPrefix(host?.kind ?? 'azure')}{prByBranch.get(b.name)!.id}
+                </span>
+              )}
+              {(b.ahead || b.behind) ? (
+                <span className="track">
+                  {b.ahead ? `↑${b.ahead}` : ''} {b.behind ? `↓${b.behind}` : ''}
+                </span>
+              ) : null}
+              {builds[b.hash] && <BuildMarker builds={builds[b.hash]} />}
+            </div>
+          ))}
+          {branches.length === 0 && !filtering && <div className="empty">No branches</div>}
+        </Section>
+        {host && (
+          <Section title={host.kind === 'gitlab' ? 'Merge requests' : 'Pull requests'} count={hasAccount ? shownPrs.length : 0} forceOpen={filtering}>
+            {!hasAccount ? (
+              <div className="connect-row">
+                <button onClick={() => actions.openSettings(host.baseUrl)}>Connect to {hostName(host.kind)}</button>
+                <small className="muted">{hostPath(host)}</small>
+              </div>
+            ) : (
+              <>
+                {!prsLoaded && <Loading className="empty" label={`Loading ${prNoun(host.kind)}s…`} />}
+                {prError && <div className="empty error-text" title={prError}>{prError}</div>}
+                {shownPrs.map((p) => (
+                  <div
+                    key={p.id}
+                    className={`ref-item pr-item${selectedPr === p.id ? ' current' : ''}`}
+                    data-nav
+                    role="treeitem"
+                    aria-level={2}
+                    title={`${prPrefix(host.kind)}${p.id} ${p.title}\n${p.sourceBranch} → ${p.targetBranch}`}
+                    onClick={() => onSelectPr(p)}
+                    onDoubleClick={() => actions.checkout(p.sourceBranch)}
+                  >
+                    <span className="pr-id">{prPrefix(host.kind)}{p.id}</span>
+                    <span className="name">{p.isDraft ? '[Draft] ' : ''}<Highlight text={p.title} query={q} /></span>
+                    <BuildMarker builds={buildsFor(builds, p.headSha, p.mergeSha)} />
+                  </div>
+                ))}
+                {prsLoaded && shownPrs.length === 0 && !filtering && !prError && <div className="empty">No open {prNoun(host.kind)}s</div>}
+              </>
+            )}
+          </Section>
+        )}
+        <Section title="Remote" count={remotes.length} forceOpen={filtering}>
+          {[...remoteGroups.entries()].map(([remote, list]) => (
+            <div key={remote}>
+              <div className="remote-group" data-nav role="treeitem" aria-level={2}>
+                <Icon name="cloud" size={14} />
+                {remote}
+              </div>
+              {list.map((r) => (
+                <div
+                  key={r.name}
+                  className="ref-item"
+                  data-nav
+                  role="treeitem"
+                  aria-level={3}
+                  style={{ paddingLeft: 30 }}
+                  title={`${remote}/${r.name}`}
+                  onClick={() => actions.selectHash(r.hash)}
+                  onDoubleClick={() => actions.checkout(r.name)}
+                  onContextMenu={(e) => remoteMenu(e, r)}
+                >
+                  <span className="name"><Highlight text={r.name} query={q} /></span>
+                  {builds[r.hash] && <BuildMarker builds={builds[r.hash]} />}
                 </div>
               ))}
-              {prsLoaded && shownPrs.length === 0 && !filtering && !prError && <div className="empty">No open {prNoun(host.kind)}s</div>}
-            </>
-          )}
-        </Section>
-      )}
-      <Section title="Remote" count={remotes.length} forceOpen={filtering}>
-        {[...remoteGroups.entries()].map(([remote, list]) => (
-          <div key={remote}>
-            <div className="remote-group">
-              <Icon name="cloud" size={14} />
-              {remote}
             </div>
-            {list.map((r) => (
-              <div
-                key={r.name}
-                className="ref-item"
-                style={{ paddingLeft: 30 }}
-                title={`${remote}/${r.name}`}
-                onClick={() => actions.selectHash(r.hash)}
-                onDoubleClick={() => actions.checkout(r.name)}
-                onContextMenu={(e) => remoteMenu(e, r)}
-              >
-                <span className="name"><Highlight text={r.name} query={q} /></span>
-                {builds[r.hash] && <BuildMarker builds={builds[r.hash]} />}
-              </div>
-            ))}
-          </div>
-        ))}
-        {remotes.length === 0 && !filtering && <div className="empty">No remote branches</div>}
-      </Section>
-      <Section title="Tags" count={tags.length} forceOpen={filtering}>
-        {(filtering || allTags ? tags : tags.slice(0, TAG_LIMIT)).map((t) => (
-          <div
-            key={t.name}
-            className="ref-item"
-            title={t.name}
-            onClick={() => actions.selectHash(t.hash)}
-            onContextMenu={(e) => tagMenu(e, t)}
-          >
-            <span className="name">
-              <Icon name="tag" size={13} className="ref-kind-icon" />
-              <Highlight text={t.name} query={q} />
-            </span>
-            {builds[t.hash] && <BuildMarker builds={builds[t.hash]} />}
-          </div>
-        ))}
-        {!filtering && tags.length > TAG_LIMIT && (
-          <button className="section-more" onClick={() => setAllTags(!allTags)}>
-            {allTags ? 'Show fewer' : `Show all ${tags.length}`}
-          </button>
-        )}
-        {tags.length === 0 && !filtering && <div className="empty">No tags</div>}
-      </Section>
-      <Section title="Stashes" count={stashes.length} forceOpen={filtering}>
-        {stashes.map((s) => (
-          <div
-            key={s.index}
-            className="ref-item"
-            title={`stash@{${s.index}}: ${s.message}\nClick to see its changes, double-click to pop`}
-            onClick={() => actions.selectHash(s.hash)}
-            onDoubleClick={() => actions.stashPop(s.index)}
-            onContextMenu={(e) => stashMenu(e, s)}
-          >
-            <span className="name"><Highlight text={s.message} query={q} /></span>
-          </div>
-        ))}
-        {stashes.length === 0 && !filtering && <div className="empty">No stashes</div>}
-      </Section>
+          ))}
+          {remotes.length === 0 && !filtering && <div className="empty">No remote branches</div>}
+        </Section>
+        <Section title="Tags" count={tags.length} forceOpen={filtering}>
+          {(filtering || allTags ? tags : tags.slice(0, TAG_LIMIT)).map((t) => (
+            <div
+              key={t.name}
+              className="ref-item"
+              data-nav
+              role="treeitem"
+              aria-level={2}
+              title={t.name}
+              onClick={() => actions.selectHash(t.hash)}
+              onContextMenu={(e) => tagMenu(e, t)}
+            >
+              <span className="name">
+                <Icon name="tag" size={13} className="ref-kind-icon" />
+                <Highlight text={t.name} query={q} />
+              </span>
+              {builds[t.hash] && <BuildMarker builds={builds[t.hash]} />}
+            </div>
+          ))}
+          {!filtering && tags.length > TAG_LIMIT && (
+            <button className="section-more" data-nav aria-level={2} onClick={() => setAllTags(!allTags)}>
+              {allTags ? 'Show fewer' : `Show all ${tags.length}`}
+            </button>
+          )}
+          {tags.length === 0 && !filtering && <div className="empty">No tags</div>}
+        </Section>
+        <Section title="Stashes" count={stashes.length} forceOpen={filtering}>
+          {stashes.map((s) => (
+            <div
+              key={s.index}
+              className="ref-item"
+              data-nav
+              role="treeitem"
+              aria-level={2}
+              title={`stash@{${s.index}}: ${s.message}\nClick to see its changes, double-click to pop`}
+              onClick={() => actions.selectHash(s.hash)}
+              onDoubleClick={() => actions.stashPop(s.index)}
+              onContextMenu={(e) => stashMenu(e, s)}
+            >
+              <span className="name"><Highlight text={s.message} query={q} /></span>
+            </div>
+          ))}
+          {stashes.length === 0 && !filtering && <div className="empty">No stashes</div>}
+        </Section>
+      </div>
     </div>
   )
 }

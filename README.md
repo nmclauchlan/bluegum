@@ -200,17 +200,30 @@ Arbor matches each repository to an account through its `origin` remote. If a to
 
 ## Keyboard shortcuts
 
-On macOS, use ⌘ in place of Ctrl.
+Everything in Arbor works from the keyboard. Press F6 to move between areas (tabs, toolbar, branches, graph, details and status bar), use the arrow keys inside them, and press Shift+F10 or the Menu key for the same actions you'd get from a right-click. Help > Keyboard shortcuts lists every shortcut in the app. On macOS, use ⌘ in place of Ctrl.
 
 | Shortcut | Action |
 | --- | --- |
-| Ctrl+T | Repository Management |
+| Ctrl+Shift+P | Command palette: run any action, check out or merge a branch |
 | Ctrl+P | Go to a repository |
+| Ctrl+T | Repository Management |
 | Ctrl+O | Open a repository |
 | Ctrl+W | Close the current tab |
 | Ctrl+Tab / Ctrl+Shift+Tab | Next / previous tab |
 | Ctrl+B | Filter branches |
+| Ctrl+F | Search commits |
 | Ctrl+Z / Ctrl+Shift+Z | Undo / redo the last git action |
+| F6 / Shift+F6 | Next / previous area |
+| F10 or Alt | Menu bar; Alt+F, Alt+E, Alt+V or Alt+H opens that menu |
+| Shift+F10 or Menu key | Actions for the focused item, or the selected commit |
+| ↑ / ↓, Home / End | Move through lists, menus and the graph |
+| ← / → | Collapse / expand sections and folders; move between tabs |
+| Enter | Open the focused item; from the graph, go to its changed files |
+| Space | Stage or unstage the focused or open file and move to the next one |
+| Delete | Discard changes to the focused file, or close the focused tab |
+| ↑ / ↓ then Space in a diff | Select lines to stage, unstage or discard; Shift extends the selection |
+| ← / → on a panel divider | Resize the panel |
+| Ctrl+Shift+← / → | Move the focused tab |
 | Ctrl+Enter | Commit |
 | Ctrl+S | Save the file being edited |
 | Ctrl+, | Settings |

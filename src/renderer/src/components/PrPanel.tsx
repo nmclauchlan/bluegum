@@ -87,7 +87,14 @@ export function PrPanel({
         {details && d.checks.length === 0 && <div className="empty">No policies or builds reported</div>}
         {!details && !error && <Loading className="empty" />}
         {d.checks.map((c, i) => (
-          <div key={i} className="pr-row" onClick={() => c.url && window.open(c.url)} style={{ cursor: c.url ? 'pointer' : 'default' }}>
+          <div
+            key={i}
+            className="pr-row"
+            role={c.url ? 'button' : undefined}
+            tabIndex={c.url ? 0 : undefined}
+            onClick={() => c.url && window.open(c.url)}
+            style={{ cursor: c.url ? 'pointer' : 'default' }}
+          >
             <span className={`pr-check ${c.state}`}>●</span>
             <span className="name">{c.name}</span>
             <span className="muted">{c.state}</span>

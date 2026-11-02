@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Shell } from '../actions'
 import type { MenuItem } from './ContextMenu'
 import type { Tab, TabGroup } from '../tabs'
 import { GroupColorDialog } from './GroupColorDialog'
 import { copyToClipboard, revealInFolder, revealLabel } from '../util'
 import { Icon } from './Icon'
+import { focusItem, listKeys, navItems, useRovingFocus } from '../keynav'
 
 type DropHint = { path: string; after: boolean } | { group: string; after?: boolean } | null
 type Dragging = { kind: 'tab'; path: string } | { kind: 'group'; id: string } | null
@@ -62,6 +63,23 @@ export function TabBar({
   const dropdown = useRef<HTMLDivElement>(null)
   const groupChips = useRef(new Map<string, HTMLDivElement>())
   const scroller = useRef<HTMLDivElement>(null)
+  const tabsNav = useRovingFocus<HTMLDivElement>()
+  const groupNav = useRovingFocus<HTMLDivElement>()
+  const openedByKey = useRef(false)
+  const tabsRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      scroller.current = el
+      tabsNav(el)
+    },
+    [tabsNav]
+  )
+  const dropdownRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      dropdown.current = el
+      groupNav(el)
+    },
+    [groupNav]
+  )
   const [overflowing, setOverflowing] = useState(false)
   const groupById = new Map(groups.map((g) => [g.id, g]))
 
@@ -85,7 +103,9 @@ export function TabBar({
       if (dropdown.current && !dropdown.current.contains(e.target as Node)) setOpenGroup(null)
     }
     const key = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') setOpenGroup(null)
+      if (e.key !== 'Escape') return
+      if (dropdown.current?.contains(document.activeElement)) groupChips.current.get(openGroup)?.focus()
+      setOpenGroup(null)
     }
     const blur = (): void => setOpenGroup(null)
     window.addEventListener('mousedown', close)
@@ -96,6 +116,12 @@ export function TabBar({
       window.removeEventListener('keydown', key)
       window.removeEventListener('blur', blur)
     }
+  }, [openGroup])
+
+  useEffect(() => {
+    if (!openGroup || !openedByKey.current) return
+    openedByKey.current = false
+    if (dropdown.current) focusItem(navItems(dropdown.current)[0])
   }, [openGroup])
 
   useEffect(() => {
@@ -189,6 +215,10 @@ export function TabBar({
         className={`tab${tab.path === activePath ? ' active' : ''}${group ? ' grouped' : ''}${isDragging ? ' dragging' : ''}${isHint ? (isHint.after ? ' drop-after' : ' drop-before') : ''}`}
         style={group ? ({ '--group-color': group.color } as React.CSSProperties) : undefined}
         title={tab.path}
+        data-nav
+        data-path={tab.path}
+        role="tab"
+        aria-selected={tab.path === activePath}
         draggable
         onClick={() => onSelect(tab.path)}
         onAuxClick={(e) => {
@@ -251,13 +281,15 @@ export function TabBar({
         title={count === 0 ? `${group.name}: empty group` : `${group.name}: ${count} repositor${count === 1 ? 'y' : 'ies'}${active ? `, showing ${active.name}` : ''}`}
         aria-current={active ? 'page' : undefined}
         role="button"
-        tabIndex={0}
+        data-nav
         aria-expanded={isOpen}
         draggable
         onClick={(e) => toggleGroup(e, group.id)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
+          if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
             e.preventDefault()
+            e.stopPropagation()
+            openedByKey.current = !isOpen
             toggleGroup(e, group.id)
           }
         }}
@@ -349,6 +381,26 @@ export function TabBar({
     shell.openMenu(e, menu)
   }
 
+  const onTabKeys = (e: React.KeyboardEvent<HTMLDivElement>): void => {
+    const tab = (e.target as HTMLElement).closest<HTMLElement>('[data-path]')
+    const path = tab?.dataset.path
+    if (tab && path && (e.key === 'Delete' || (e.ctrlKey && e.shiftKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')))) {
+      e.preventDefault()
+      const items = navItems(e.currentTarget)
+      const at = items.indexOf(tab)
+      if (e.key === 'Delete') {
+        focusItem(items[at + 1] ?? items[at - 1])
+        onClose(path)
+        return
+      }
+      const after = e.key === 'ArrowRight'
+      const target = items[at + (after ? 1 : -1)]?.dataset.path
+      if (target) onMove(path, target, after)
+      return
+    }
+    listKeys(e, 'horizontal')
+  }
+
   const open = openGroup ? groupById.get(openGroup) : undefined
   const openMembers = open ? tabs.filter((t) => t.group === open.id) : []
   const colorGroup = colorGroupId ? groupById.get(colorGroupId) : undefined
@@ -357,7 +409,10 @@ export function TabBar({
     <div className="tabs">
       <div
         className="tabs-scroll"
-        ref={scroller}
+        ref={tabsRef}
+        role="tablist"
+        aria-label="Open repositories"
+        onKeyDown={onTabKeys}
         onWheel={(e) => {
           if (e.deltaY && scroller.current) scroller.current.scrollLeft += e.deltaY
         }}
@@ -376,17 +431,29 @@ export function TabBar({
         {items}
       </div>
       {overflowing && (
-        <div className="tab tab-overflow" title="All tabs" onClick={allTabsMenu}>
+        <div className="tab tab-overflow" title="All tabs" role="button" tabIndex={0} aria-label="All tabs" onClick={allTabsMenu}>
           <Icon name="chevronDown" size={14} />
         </div>
       )}
-      <div className="tab tab-add" title="Open, clone or create a group" onClick={addMenu}>
+      <div className="tab tab-add" title="Open, clone or create a group" role="button" tabIndex={0} aria-label="Open, clone or create a group" onClick={addMenu}>
         +
       </div>
       {open && (
         <div
-          ref={dropdown}
+          ref={dropdownRef}
           className="group-dropdown"
+          onKeyDown={(e) => {
+            const row = (e.target as HTMLElement).closest<HTMLElement>('[data-path]')
+            if (e.key === 'Delete' && row?.dataset.path) {
+              e.preventDefault()
+              const items = navItems(e.currentTarget)
+              const at = items.indexOf(row)
+              focusItem(items[at + 1] ?? items[at - 1])
+              onClose(row.dataset.path)
+              return
+            }
+            listKeys(e)
+          }}
           style={{ left: anchor.x, top: anchor.y, borderTopColor: open.color }}
           onMouseDown={(e) => e.stopPropagation()}
           onDragOver={(e) => {
@@ -415,6 +482,9 @@ export function TabBar({
               key={t.path}
               className={`group-row${t.path === activePath ? ' active' : ''}`}
               title={t.path}
+              data-nav
+              data-path={t.path}
+              aria-current={t.path === activePath || undefined}
               onClick={() => {
                 onSelect(t.path)
                 setOpenGroup(null)
@@ -437,6 +507,7 @@ export function TabBar({
           ))}
           <div
             className="group-row add"
+            data-nav
             onClick={() => {
               setOpenGroup(null)
               onOpenInto(open.id)

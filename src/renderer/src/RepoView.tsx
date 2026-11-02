@@ -24,6 +24,7 @@ import { currentSettings, useSettings } from './settings'
 import { useCommands, type Command } from './commands'
 
 
+const PAGE_ROWS = 15
 const BUILD_COMMITS = 50
 const BUILD_LOOKUPS = 150
 
@@ -351,10 +352,11 @@ export function RepoView({
     if (!active || viewing || comparing) return
     const key = (e: KeyboardEvent): void => {
       if (e.ctrlKey || e.metaKey || e.altKey) return
-      const step = e.key === 'ArrowDown' || e.key === 'j' ? 1 : e.key === 'ArrowUp' || e.key === 'k' ? -1 : 0
+      const step =
+        e.key === 'ArrowDown' || e.key === 'j' ? 1 : e.key === 'ArrowUp' || e.key === 'k' ? -1 : e.key === 'PageDown' ? PAGE_ROWS : e.key === 'PageUp' ? -PAGE_ROWS : 0
       if (!step && e.key !== 'Home' && e.key !== 'End') return
       const t = e.target
-      if (t instanceof HTMLElement && t.closest('input, textarea, select, [contenteditable="true"], .cm-editor')) return
+      if (t instanceof HTMLElement && t.closest('input, textarea, select, [contenteditable="true"], .cm-editor, [data-nav], [role="menubar"], .splitter')) return
       if (document.querySelector('.overlay, .dialog, .context-menu-root, .menubar-dropdown')) return
       const list = rowsRef.current
       if (!list.length) return
@@ -896,6 +898,7 @@ export function RepoView({
       )}
       <Splitter
         className="splitter-sidebar"
+        label="Resize the branch panel"
         direction="vertical"
         value={fitted.sidebar}
         onChange={(v) => (v < 100 ? setPanelCollapsed('sidebar', true) : setLayout('sidebar', v))}
@@ -946,6 +949,7 @@ export function RepoView({
       )}
       <Splitter
         className="splitter-details"
+        label="Resize the details panel"
         direction="vertical"
         value={fitted.panel}
         onChange={(v) => (v < 200 ? setPanelCollapsed('details', true) : setLayout('panel', v))}

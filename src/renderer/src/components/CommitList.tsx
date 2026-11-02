@@ -8,6 +8,7 @@ import { Avatar } from '../avatars'
 import { Loading } from './Spinner'
 import { BuildMarker } from './BuildStatus'
 import type { MenuItem } from './ContextMenu'
+import { focusItem } from '../keynav'
 
 const ROW_H = 28
 const MAX_LANES = 14
@@ -258,7 +259,7 @@ function Header({
   onMenu: (e: React.MouseEvent) => void
 }): React.JSX.Element {
   return (
-    <div className="commit-header" onContextMenu={onMenu}>
+    <div className="commit-header" tabIndex={0} role="group" aria-label="Graph columns (Shift+F10 for column options)" onContextMenu={onMenu}>
       {shown('colRefs') && (
         <div className="hcell refs" data-col="colRefs" style={{ width: cols.colRefs }}>
           Branch / Tag
@@ -449,6 +450,9 @@ export function CommitList({
     rows.push(
       <div
         key={c.hash}
+        id={`commit-${c.hash}`}
+        role="option"
+        aria-selected={selected === c.hash}
         data-hash={c.hash}
         className={`commit-row${selected === c.hash ? ' selected' : ''}${isWip ? ' wip' : ''}${matches?.has(c.hash) ? ' match' : ''}`}
         style={{ top: i * ROW_H }}
@@ -532,7 +536,22 @@ export function CommitList({
         }}
       />
       {filterNote}
-      <div className="commit-scroll" ref={container}>
+      <div
+        className="commit-scroll"
+        ref={container}
+        tabIndex={0}
+        role="listbox"
+        aria-label="Commits"
+        aria-activedescendant={selected ? `commit-${selected}` : undefined}
+        data-entry
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter' || e.altKey || e.ctrlKey || e.metaKey) return
+          const files = listRef.current?.closest('.repo-view')?.querySelector<HTMLElement>('.panel [data-nav][tabindex="0"]')
+          if (!files) return
+          e.preventDefault()
+          focusItem(files)
+        }}
+      >
         {loading && total === 0 && <Loading label="Loading history…" />}
         <div className="rows" style={{ height: total * ROW_H }}>
           {shown('colGraph') && (
