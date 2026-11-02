@@ -37,7 +37,7 @@ export function AboutDialog({ onClose }: { onClose: () => void }): React.JSX.Ele
           </tbody>
         </table>
         <div className="buttons">
-          <button onClick={() => window.open('https://github.com/nmclauchlan/arbor')}>GitHub</button>
+          <button onClick={() => window.open('https://github.com/nmclauchlan/bluegum')}>GitHub</button>
           <button className="primary" onClick={onClose}>Close</button>
         </div>
       </div>

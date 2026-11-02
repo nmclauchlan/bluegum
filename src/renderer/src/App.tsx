@@ -465,7 +465,7 @@ export default function App(): React.JSX.Element {
               ? { label: `Restart to install Blue Gum ${status.version}`, onClick: () => void window.updater.install() }
               : { label: busy ? 'Checking for updates…' : 'Check for updates', disabled: busy, onClick: () => void checkForUpdates() },
             { separator: true },
-            { label: 'Release notes', onClick: () => window.open(`https://github.com/nmclauchlan/arbor/releases/tag/v${version}`) },
+            { label: 'Release notes', onClick: () => window.open(`https://github.com/nmclauchlan/bluegum/releases/tag/v${version}`) },
             {
               label: 'Copy version',
               onClick: () => {
@@ -745,9 +745,9 @@ export default function App(): React.JSX.Element {
       label: 'Help',
       items: [
         { label: 'Keyboard shortcuts', onSelect: () => setInfoDialog('shortcuts') },
-        { label: 'Documentation', onSelect: () => window.open('https://github.com/nmclauchlan/arbor#readme') },
-        { label: 'Release notes', onSelect: () => window.open('https://github.com/nmclauchlan/arbor/releases') },
-        { label: 'Report an issue', onSelect: () => window.open('https://github.com/nmclauchlan/arbor/issues/new') },
+        { label: 'Documentation', onSelect: () => window.open('https://github.com/nmclauchlan/bluegum#readme') },
+        { label: 'Release notes', onSelect: () => window.open('https://github.com/nmclauchlan/bluegum/releases') },
+        { label: 'Report an issue', onSelect: () => window.open('https://github.com/nmclauchlan/bluegum/issues/new') },
         { separator: true },
         { label: 'Check for updates', onSelect: () => void checkForUpdates() },
         { label: 'About Blue Gum', onSelect: () => setInfoDialog('about') }

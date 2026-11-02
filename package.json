@@ -54,7 +54,7 @@
     "publish": {
       "provider": "github",
       "owner": "nmclauchlan",
-      "repo": "arbor",
+      "repo": "bluegum",
       "releaseType": "release"
     }
   },
@@ -88,9 +88,9 @@
     "name": "Nathan McLauchlan",
     "email": "nathan@nathanmclauchlan.com"
   },
-  "homepage": "https://github.com/nmclauchlan/arbor",
+  "homepage": "https://github.com/nmclauchlan/bluegum",
   "repository": {
     "type": "git",
-    "url": "https://github.com/nmclauchlan/arbor.git"
+    "url": "https://github.com/nmclauchlan/bluegum.git"
   }
 }

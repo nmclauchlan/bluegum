@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="build/icon.png" width="128" height="128" alt="Blue Gum icon">
+  <img src="build/icon.png" width="128" height="128" alt="Blue Gum: a blue eucalyptus leaf with a git branch in its vein">
 </p>
 
 <h1 align="center">Blue Gum</h1>
@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/nmclauchlan/arbor/releases/latest">Download</a> ·
+  <a href="https://github.com/nmclauchlan/bluegum/releases/latest">Download</a> ·
   <a href="#features">Features</a> ·
   <a href="#organise-repositories-with-tab-groups">Tab groups</a> ·
   <a href="#connect-your-hosts">Connect your hosts</a> ·
@@ -164,7 +164,7 @@ Drag groups and tabs to reorder them. Groups, their colours and your open tabs a
 
 ## Download
 
-Download the latest version from the [releases page](https://github.com/nmclauchlan/arbor/releases/latest):
+Download the latest version from the [releases page](https://github.com/nmclauchlan/bluegum/releases/latest):
 
 | Platform | Package |
 | --- | --- |
