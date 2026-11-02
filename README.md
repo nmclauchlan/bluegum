@@ -77,7 +77,8 @@ Arbor fetches your open repositories in the background, every ten minutes by def
   - reset (soft, mixed or hard) and create branches, tags and worktrees;
   - rename or delete a branch locally and on the remote;
   - save a patch, and solo or hide branches in the graph.
-- **Changes.** Stage, unstage and discard per file, per folder or everything at once, in a folder tree or flat list. Click a file to see its diff, double-click to edit it in place with syntax highlighting, and commit with Ctrl+Enter.
+- **Changes.** Stage, unstage and discard per file, per folder or everything at once, in a folder tree or flat list. Click a file to see its diff, double-click it to stage or unstage it, use its Edit button to edit it in place with syntax highlighting, and commit with Ctrl+Enter.
+- **The status bar.** Shows the current branch and its upstream, how many commits you have to push and pull, when the repository was last fetched (click it to fetch again) and when a background fetch is running.
 
 ### Stage exactly what you mean
 

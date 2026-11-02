@@ -193,6 +193,7 @@ const handlers: Handlers = {
     await writeRecent([])
   },
   backgroundFetch: gitService.backgroundFetch,
+  lastFetched: gitService.lastFetched,
   incoming: gitService.incoming,
   undo: journal.undo,
   redo: journal.redo,

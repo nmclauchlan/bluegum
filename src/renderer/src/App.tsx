@@ -70,6 +70,7 @@ export default function App(): React.JSX.Element {
   const [incoming, setIncoming] = useState<Record<string, RepoIncoming>>({})
   const [checking, setChecking] = useState(false)
   const [lastChecked, setLastChecked] = useState<number | null>(null)
+  const [fetchingPaths, setFetchingPaths] = useState<ReadonlySet<string>>(new Set())
   const [notifOpen, setNotifOpen] = useState<Set<string> | null>(null)
   const [pullingRepo, setPullingRepo] = useState<string | null>(null)
   const [focus, setFocus] = useState<{ path: string; hash: string; n: number } | null>(null)
@@ -217,10 +218,18 @@ export default function App(): React.JSX.Element {
         for (let t = queue.shift(); t; t = queue.shift()) {
           let error: string | undefined
           if (doFetch) {
+            const path = t.path
+            setFetchingPaths((s) => new Set(s).add(path))
             try {
-              await window.git.backgroundFetch(t.path)
+              await window.git.backgroundFetch(path)
             } catch (e) {
               error = errorMessage(e).split('\n').find((l) => l.trim())?.replace(/^.*?(fatal|error):\s*/i, '')
+            } finally {
+              setFetchingPaths((s) => {
+                const next = new Set(s)
+                next.delete(path)
+                return next
+              })
             }
           }
           await refreshIncoming(t.path, t.name, error)
@@ -845,7 +854,7 @@ export default function App(): React.JSX.Element {
           <div className="statusbar">
             <span className="spacer" />
             <UpdateNotice />
-        <AppVersion />
+            <AppVersion />
           </div>
         </>
       ) : (
@@ -880,6 +889,7 @@ export default function App(): React.JSX.Element {
           shell={shell}
           onClose={() => closeTab(t.path)}
           focus={focus && focus.path === t.path ? focus : null}
+          backgroundFetching={fetchingPaths.has(t.path)}
         />
       ))}
       {infoDialog === 'about' && <AboutDialog onClose={() => setInfoDialog(null)} />}

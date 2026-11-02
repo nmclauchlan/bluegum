@@ -284,7 +284,7 @@ export function WorkingTree({
               onDoubleClick={(f) => view('unstaged', f, 'conflict')}
               onContextMenu={fileMenu('conflict')}
               actions={(f) => (
-                <span className="actions" onClick={(e) => e.stopPropagation()}>
+                <span className="actions" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
                   <button title="Resolve in editor" aria-label="Resolve in editor" onClick={() => view('unstaged', f, 'conflict')}>
                     <Icon name="conflict" size={14} />
                   </button>
@@ -305,10 +305,10 @@ export function WorkingTree({
           files={unstagedFiles}
           selectedPath={selectedIn('unstaged')}
           onSelect={(f) => toggle('unstaged', f, 'diff')}
-          onDoubleClick={(f) => view('unstaged', f, 'edit')}
+          onDoubleClick={(f) => void stage([f.path])}
           onContextMenu={fileMenu('unstaged')}
           actions={(f) => (
-            <span className="actions" onClick={(e) => e.stopPropagation()}>
+            <span className="actions" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
               {canEdit(f) && (
                 <button title="Edit" aria-label="Edit" onClick={() => view('unstaged', f, 'edit')}>
                   <Icon name="edit" size={14} />
@@ -333,10 +333,10 @@ export function WorkingTree({
           files={status.staged}
           selectedPath={selectedIn('staged')}
           onSelect={(f) => toggle('staged', f, 'diff')}
-          onDoubleClick={(f) => view('staged', f, 'edit')}
+          onDoubleClick={(f) => void unstage([f.path])}
           onContextMenu={fileMenu('staged')}
           actions={(f) => (
-            <span className="actions" onClick={(e) => e.stopPropagation()}>
+            <span className="actions" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
               {canEdit(f) && (
                 <button title="Edit" aria-label="Edit" onClick={() => view('staged', f, 'edit')}>
                   <Icon name="edit" size={14} />

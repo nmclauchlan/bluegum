@@ -81,7 +81,7 @@ test('clicking a changed file previews its diff in the main view', async () => {
     await expect(v.locator('.file-viewer')).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(v.locator('.file-viewer')).toBeHidden()
-    await v.locator('.file-item', { hasText: 'notes.md' }).dblclick()
+    await v.locator('.file-item', { hasText: 'notes.md' }).getByRole('button', { name: 'Edit' }).click()
     await expect(v.locator('.file-viewer .cm-editor')).toBeVisible()
     await page.keyboard.press('Escape')
     await v.locator('.file-viewer-bar > button', { hasText: 'Close' }).click()

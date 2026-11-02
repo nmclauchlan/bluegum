@@ -351,7 +351,8 @@ textarea { resize: vertical; font-family: inherit; }
 .file-item .path { flex: 1; overflow: hidden; text-overflow: ellipsis; direction: rtl; text-align: left; }
 .file-item .path span { direction: ltr; unicode-bidi: bidi-override; }
 .file-item .actions { display: none; gap: 2px; }
-.file-item:hover .actions { display: flex; }
+.file-item:hover .actions,
+.file-item.selected .actions { display: flex; }
 .file-item .actions button { padding: 0 6px; font-size: 11px; height: 18px; line-height: 16px; }
 .status-letter {
   width: 16px;
@@ -461,6 +462,14 @@ textarea { resize: vertical; font-family: inherit; }
 }
 .statusbar .spin { color: var(--accent); }
 .statusbar .spacer { flex: 1; }
+.sync-status { display: inline-flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+.sync-branch { color: var(--fg); overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
+.sync-upstream { color: var(--fg-faint); overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
+.sync-ahead, .sync-behind { display: inline-flex; align-items: center; gap: 2px; color: var(--accent); font-variant-numeric: tabular-nums; }
+.sync-note { color: var(--fg-faint); }
+.sync-note.gone { color: var(--yellow); }
+.statusbar-link { padding: 1px 6px; border: none; border-radius: 3px; background: transparent; color: inherit; font: inherit; height: auto; }
+.statusbar-link:hover:not(:disabled) { background: var(--bg-3); color: var(--fg); }
 
 .welcome {
   flex: 1;

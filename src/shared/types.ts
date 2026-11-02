@@ -68,6 +68,7 @@ export interface Branch {
   upstream?: string
   ahead?: number
   behind?: number
+  gone?: boolean
 }
 
 export interface RemoteBranch {
@@ -254,6 +255,7 @@ export interface GitApi {
   removeRecent(path: string): Promise<void>
   clearRecent(): Promise<void>
   backgroundFetch(path: string): Promise<void>
+  lastFetched(path: string): Promise<number | null>
   incoming(path: string, since: Record<string, string>): Promise<IncomingUpstream[]>
   undo(path: string): Promise<string>
   redo(path: string): Promise<string>

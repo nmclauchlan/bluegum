@@ -12,6 +12,7 @@ import { CommitPanel } from './components/CommitPanel'
 import { FileViewer, type FileViewRequest } from './components/FileViewer'
 import { CompareView, type CompareRequest } from './components/CompareView'
 import { StashDialog } from './components/StashDialog'
+import { SyncStatus } from './components/SyncStatus'
 import { Sidebar } from './components/Sidebar'
 import { Toolbar } from './components/Toolbar'
 import { WorkingTree } from './components/WorkingTree'
@@ -31,13 +32,15 @@ export function RepoView({
   active,
   shell,
   onClose,
-  focus
+  focus,
+  backgroundFetching = false
 }: {
   repo: RepoInfo
   active: boolean
   shell: Shell
   onClose: () => void
   focus?: { hash: string; n: number } | null
+  backgroundFetching?: boolean
 }): React.JSX.Element {
   const [loadError, setLoadError] = useState<string | null>(null)
   const { pollInterval, logLimit } = useSettings()
@@ -45,6 +48,7 @@ export function RepoView({
   const POLL_MS = pollInterval * 1000
   const [commits, setCommits] = useState<Commit[]>([])
   const [refs, setRefs] = useState<RepoRefs | null>(null)
+  const [fetchedAt, setFetchedAt] = useState<number | null>(null)
   const [status, setStatus] = useState<RepoStatus | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
   const [scrollTarget, setScrollTarget] = useState<{ hash: string; n: number; nearest?: boolean } | null>(null)
@@ -127,13 +131,15 @@ export function RepoView({
   const fitted = fitPanels(windowWidth, sidebarOpen ? layout.sidebar : 0, detailsOpen ? layout.panel : 0)
 
   const loadAll = useCallback(async () => {
-    const [log, r, s, u] = await Promise.all([
+    const [log, r, s, u, f] = await Promise.all([
       window.git.log(path, LOG_LIMIT, graphFilter),
       window.git.refs(path),
       window.git.status(path),
-      window.git.undoInfo(path)
+      window.git.undoInfo(path),
+      window.git.lastFetched(path).catch(() => null)
     ])
     setUndoInfo(u)
+    setFetchedAt(f)
     lastRefsJson.current = JSON.stringify(r)
     lastStatusJson.current = JSON.stringify(s)
     setCommits(log)
@@ -196,7 +202,8 @@ export function RepoView({
     const tick = async (): Promise<void> => {
       if (busy) return
       try {
-        const [r, s] = await Promise.all([window.git.refs(path), window.git.status(path)])
+        const [r, s, f] = await Promise.all([window.git.refs(path), window.git.status(path), window.git.lastFetched(path).catch(() => null)])
+        setFetchedAt(f)
         const rj = JSON.stringify(r)
         const sj = JSON.stringify(s)
         if (sj !== lastStatusJson.current) {
@@ -222,6 +229,12 @@ export function RepoView({
       window.removeEventListener('focus', onFocus)
     }
   }, [path, active, busy, loadError, LOG_LIMIT, POLL_MS, graphFilter])
+
+  const wasFetching = useRef(backgroundFetching)
+  useEffect(() => {
+    if (wasFetching.current && !backgroundFetching && active && !busyRef.current) refresh()
+    wasFetching.current = backgroundFetching
+  }, [backgroundFetching, active, refresh])
 
   useEffect(() => {
     setViewing(null)
@@ -987,6 +1000,7 @@ export function RepoView({
         />
       )}
       <div className="statusbar">
+        {refs && <SyncStatus refs={refs} fetchedAt={fetchedAt} fetching={backgroundFetching} busy={!!busy} onFetch={actions.fetch} />}
         <span>
           {commits.length} commits{commits.length >= LOG_LIMIT ? ` (showing first ${LOG_LIMIT})` : ''}
         </span>

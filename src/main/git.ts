@@ -1,7 +1,7 @@
 import { simpleGit, SimpleGit } from 'simple-git'
-import { readFile, writeFile, access, rm, mkdtemp } from 'fs/promises'
+import { readFile, writeFile, access, rm, mkdtemp, stat } from 'fs/promises'
 import { tmpdir } from 'os'
-import { basename, join } from 'path'
+import { basename, join, resolve } from 'path'
 import { getSettings } from './settings'
 import {
   type RebaseCommit, type RebaseStep, type BlameResult, type CommitSearchMode, type FileHistoryEntry,
@@ -181,7 +181,8 @@ export async function refs(path: string): Promise<RepoRefs> {
         hash,
         upstream: upstream || undefined,
         ahead: a ? Number(a[1]) : 0,
-        behind: b ? Number(b[1]) : 0
+        behind: b ? Number(b[1]) : 0,
+        ...(track === '[gone]' && { gone: true })
       })
     } else if (refname.startsWith('refs/remotes/')) {
       const full = refname.slice(13)
@@ -709,6 +710,11 @@ export async function continueOperation(path: string, message: string): Promise<
 }
 
 export const gitFor = git
+
+export async function lastFetched(path: string): Promise<number | null> {
+  const file = (await git(path).revparse(['--git-path', 'FETCH_HEAD'])).trim()
+  return stat(resolve(path, file)).then((s) => Math.round(s.mtimeMs), () => null)
+}
 
 export async function backgroundFetch(path: string): Promise<void> {
   await gitWithEnv({ GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'never' }, path, 45_000).raw(['fetch', '--all', '--prune', '--quiet'])
