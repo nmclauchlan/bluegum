@@ -223,10 +223,21 @@ async function exists(p: string): Promise<boolean> {
   return access(p).then(() => true, () => false)
 }
 
+const gitDirs = new Map<string, Promise<string>>()
+
+function gitDirOf(path: string): Promise<string> {
+  let dir = gitDirs.get(path)
+  if (!dir) {
+    dir = git(path).revparse(['--absolute-git-dir']).then((d) => d.trim())
+    dir.catch(() => gitDirs.delete(path))
+    gitDirs.set(path, dir)
+  }
+  return dir
+}
+
 async function operationState(path: string): Promise<OperationState | null> {
-  const g = git(path)
-  const gitDir = (await g.revparse(['--git-dir'])).trim()
-  const abs = (p: string): string => join(path, gitDir, p)
+  const gitDir = await gitDirOf(path)
+  const abs = (p: string): string => join(gitDir, p)
   const firstLine = async (p: string): Promise<string> =>
     readFile(abs(p), 'utf8').then((s) => s.split('\n').find((l) => l.trim() && !l.startsWith('#')) ?? '', () => '')
   if (await exists(abs('MERGE_HEAD'))) return { kind: 'merge', message: await firstLine('MERGE_MSG') }
@@ -239,8 +250,11 @@ async function operationState(path: string): Promise<OperationState | null> {
 }
 
 export async function status(path: string): Promise<RepoStatus> {
-  const out = await git(path).raw(['--no-optional-locks', 'status', '--porcelain=v1', '-z', '--untracked-files=all'])
-  const result: RepoStatus = { staged: [], unstaged: [], conflicted: [], operation: await operationState(path) }
+  const [out, operation] = await Promise.all([
+    git(path).raw(['--no-optional-locks', 'status', '--porcelain=v1', '-z', '--untracked-files=all']),
+    operationState(path)
+  ])
+  const result: RepoStatus = { staged: [], unstaged: [], conflicted: [], operation }
   const entries = out.split('\0')
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i]
@@ -275,9 +289,13 @@ export async function stage(path: string, files: string[]): Promise<void> {
 export async function unstage(path: string, files: string[]): Promise<void> {
   if (!files.length) return
   const g = git(path)
-  const hasHead = await g.revparse(['--verify', 'HEAD']).then(() => true).catch(() => false)
-  if (hasHead) await g.raw(['reset', '-q', 'HEAD', '--', ...files])
-  else await g.raw(['rm', '--cached', '-r', '-q', '--', ...files])
+  try {
+    await g.raw(['reset', '-q', 'HEAD', '--', ...files])
+  } catch (e) {
+    const hasHead = await g.revparse(['--verify', 'HEAD']).then(() => true, () => false)
+    if (hasHead) throw e
+    await g.raw(['rm', '--cached', '-r', '-q', '--', ...files])
+  }
 }
 
 export async function applyPatch(path: string, patch: string, mode: 'stage' | 'unstage' | 'discard'): Promise<void> {

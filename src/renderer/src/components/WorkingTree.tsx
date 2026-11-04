@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RepoStatus, StatusFile } from '@shared/types'
 import type { Actions } from '../actions'
 import type { MenuItem } from './ContextMenu'
@@ -9,6 +9,7 @@ import { Icon } from './Icon'
 import { focusItem, listKeys, useRovingFocus } from '../keynav'
 
 type Area = 'staged' | 'unstaged'
+type Move = 'stage' | 'unstage'
 
 const SUMMARY_LIMIT = 72
 
@@ -18,6 +19,32 @@ function siblingRow(row: HTMLElement, dir: 1 | -1): HTMLElement | undefined {
   }
 }
 const FAILED: Record<string, string> = { commit: 'Commit failed', stage: 'Staging failed', unstage: 'Unstaging failed', discard: 'Discarding failed', abort: 'Abort failed', continue: 'Continuing failed' }
+
+const byPath = (a: StatusFile, b: StatusFile): number => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0)
+
+function mark(pending: ReadonlyMap<string, Move>, paths: string[], kind: Move): ReadonlyMap<string, Move> {
+  const next = new Map(pending)
+  for (const p of paths) next.set(p, kind)
+  return next
+}
+
+function unmark(pending: ReadonlyMap<string, Move>, paths: string[], kind: Move): ReadonlyMap<string, Move> {
+  const next = new Map(pending)
+  for (const p of paths) if (next.get(p) === kind) next.delete(p)
+  return next
+}
+
+function withPending(status: RepoStatus, pending: ReadonlyMap<string, Move>): { staged: StatusFile[]; unstaged: StatusFile[] } {
+  if (!pending.size) return { staged: status.staged, unstaged: status.unstaged }
+  const conflicted = new Set(status.conflicted)
+  const moving = (f: StatusFile, kind: Move): boolean => pending.get(f.path) === kind && !conflicted.has(f.path)
+  const staged = status.staged.filter((f) => !moving(f, 'unstage'))
+  const unstaged = status.unstaged.filter((f) => !moving(f, 'stage'))
+  const has = (list: StatusFile[], path: string): boolean => list.some((f) => f.path === path)
+  for (const f of status.unstaged) if (moving(f, 'stage') && !has(staged, f.path)) staged.push({ ...f, status: f.status === '?' ? 'A' : f.status })
+  for (const f of status.staged) if (moving(f, 'unstage') && !has(unstaged, f.path)) unstaged.push({ ...f, status: f.status === 'A' ? '?' : f.status })
+  return { staged: staged.sort(byPath), unstaged: unstaged.sort(byPath) }
+}
 
 export function WorkingTree({
   repoPath,
@@ -42,7 +69,8 @@ export function WorkingTree({
   const [description, setDescription] = useState('')
   const [amendPrefill, setAmendPrefill] = useState<string | null>(null)
   const descriptionRef = useRef<HTMLTextAreaElement>(null)
-  const spaceQueue = useRef<Promise<void>>(Promise.resolve())
+  const queue = useRef<Promise<unknown>>(Promise.resolve())
+  const [pending, setPending] = useState<ReadonlyMap<string, Move>>(() => new Map())
   const filesNav = useRovingFocus<HTMLDivElement>()
   const pendingFocus = useRef<{ area: Area; path: string } | null>(null)
   const message = description.trim() ? `${summary.trim()}\n\n${description.trim()}` : summary.trim()
@@ -55,8 +83,9 @@ export function WorkingTree({
   const [working, setWorking] = useState<string | null>(null)
   const operation = status.operation
   const conflicted = new Set(status.conflicted)
-  const conflictFiles = status.unstaged.filter((f) => conflicted.has(f.path))
-  const unstagedFiles = status.unstaged.filter((f) => !conflicted.has(f.path))
+  const { staged: stagedFiles, unstaged: changedFiles } = useMemo(() => withPending(status, pending), [status, pending])
+  const conflictFiles = changedFiles.filter((f) => conflicted.has(f.path))
+  const unstagedFiles = changedFiles.filter((f) => !conflicted.has(f.path))
 
   useEffect(() => {
     if (operation?.message && !message) setMessage(operation.message)
@@ -79,12 +108,10 @@ export function WorkingTree({
       if (t instanceof HTMLElement && t.closest('input, textarea, select, button, [contenteditable="true"], .cm-editor')) return
       if (document.querySelector('.overlay, .dialog, .context-menu-root') || conflicted.has(viewing.file.path)) return
       e.preventDefault()
-      const list = staged ? status.staged : unstagedFiles
+      const list = staged ? stagedFiles : unstagedFiles
       const at = list.findIndex((f) => f.path === viewing.file.path)
       const next = list[at + 1] ?? list[at - 1]
-      const file = viewing.file.path
-      const task = (): Promise<void> => (staged ? unstage : stage)([file])
-      spaceQueue.current = spaceQueue.current.then(task, task)
+      void (staged ? unstage : stage)([viewing.file.path])
       if (next) view(staged ? 'staged' : 'unstaged', next, 'diff')
       else onView(null)
     }
@@ -94,9 +121,9 @@ export function WorkingTree({
 
   useEffect(() => {
     if (!viewing || viewing.source.kind !== 'worktree') return
-    const list = viewing.source.staged ? status.staged : status.unstaged
+    const list = viewing.source.staged ? stagedFiles : changedFiles
     if (!list.some((f) => f.path === viewing.file.path)) onView(null)
-  }, [status, viewing, onView])
+  }, [stagedFiles, changedFiles, viewing, onView])
 
   useEffect(() => {
     const want = pendingFocus.current
@@ -105,29 +132,49 @@ export function WorkingTree({
     if (!row) return
     pendingFocus.current = null
     focusItem(row)
-  }, [status, filesNav])
+  }, [stagedFiles, changedFiles, filesNav])
 
-  const run = async (fn: () => Promise<void>, key = 'action'): Promise<void> => {
+  const enqueue = <T,>(task: () => Promise<T>): Promise<T> => {
+    const next = queue.current.then(task, task)
+    queue.current = next.catch(() => undefined)
+    return next
+  }
+
+  const run = async (fn: () => Promise<void>, key = 'action', reload: 'all' | 'status' = 'all'): Promise<void> => {
     setWorking(key)
     try {
-      await fn()
+      await enqueue(fn)
     } catch (e) {
-      actions.showError(errorMessage(e), FAILED[key.replace(/-all$/, '')])
+      actions.showError(errorMessage(e), FAILED[key])
     } finally {
       setWorking(null)
-      actions.refresh()
+      if (reload === 'all') actions.refresh()
+      else void actions.refreshStatus()
     }
   }
 
-  const stage = (files: string[], key = 'stage'): Promise<void> => run(() => window.git.stage(repoPath, files), key)
-  const unstage = (files: string[], key = 'unstage'): Promise<void> => run(() => window.git.unstage(repoPath, files), key)
+  const move = (files: string[], kind: Move): Promise<void> => {
+    if (!files.length) return Promise.resolve()
+    setPending((p) => mark(p, files, kind))
+    return enqueue(async () => {
+      try {
+        await (kind === 'stage' ? window.git.stage(repoPath, files) : window.git.unstage(repoPath, files))
+      } catch (e) {
+        actions.showError(errorMessage(e), FAILED[kind])
+      }
+      await actions.refreshStatus()
+      setPending((p) => unmark(p, files, kind))
+    })
+  }
+  const stage = (files: string[]): Promise<void> => move(files, 'stage')
+  const unstage = (files: string[]): Promise<void> => move(files, 'unstage')
   const discard = async (files: string[]): Promise<boolean> => {
     const ok = await actions.confirm(
       'Discard changes',
       `Discard changes to ${files.length === 1 ? files[0] : `${files.length} files`}? This cannot be undone.`,
       true
     )
-    if (ok) await run(() => window.git.discard(repoPath, files), 'discard')
+    if (ok) await run(() => window.git.discard(repoPath, files), 'discard', 'status')
     return ok
   }
 
@@ -182,18 +229,17 @@ export function WorkingTree({
       }
       if (next) focusItem(next)
       else pendingFocus.current = { area: area === 'staged' ? 'unstaged' : 'staged', path: file.path }
-      const list = area === 'staged' ? status.staged : unstagedFiles
+      const list = area === 'staged' ? stagedFiles : unstagedFiles
       if (selectedIn(area) === file.path) {
         const after = list.find((f) => f.path === next?.dataset.path)
         if (after) view(area, after, 'diff')
         else onView(null)
       }
-      const task = (): Promise<void> => (area === 'staged' ? unstage : stage)([file.path])
-      spaceQueue.current = spaceQueue.current.then(task, task)
+      void (area === 'staged' ? unstage : stage)([file.path])
     }
 
   const resolveWith = (file: StatusFile, side: 'ours' | 'theirs'): Promise<void> =>
-    run(() => window.git.resolveFile(repoPath, file.path, null, side))
+    run(() => window.git.resolveFile(repoPath, file.path, null, side), 'action', 'status')
 
   const abort = async (): Promise<void> => {
     if (!operation) return
@@ -233,9 +279,13 @@ export function WorkingTree({
         items.push({ icon: 'stash', label: `Stash ${noun}…`, onClick: () => actions.stash(paths) })
       } else {
         const takeAll = (side: 'ours' | 'theirs'): Promise<void> =>
-          run(async () => {
-            for (const p of paths) await window.git.resolveFile(repoPath, p, null, side)
-          })
+          run(
+            async () => {
+              for (const p of paths) await window.git.resolveFile(repoPath, p, null, side)
+            },
+            'action',
+            'status'
+          )
         items.push({ label: folder ? 'Take ours for folder' : 'Take ours', onClick: () => takeAll('ours') })
         items.push({ label: folder ? 'Take theirs for folder' : 'Take theirs', onClick: () => takeAll('theirs') })
       }
@@ -272,19 +322,19 @@ export function WorkingTree({
       : null
 
   const unstagedPaths = unstagedFiles.map((f) => f.path)
-  const stagedPaths = status.staged.map((f) => f.path)
-  const stageAllFirst = !amend && !operation && status.staged.length === 0 && unstagedFiles.length > 0
-  const canCommit = amend || (!!summary.trim() && (status.staged.length > 0 || stageAllFirst))
+  const stagedPaths = stagedFiles.map((f) => f.path)
+  const stageAllFirst = !amend && !operation && stagedFiles.length === 0 && unstagedFiles.length > 0
+  const canCommit = amend || (!!summary.trim() && (stagedFiles.length > 0 || stageAllFirst))
   const files = (n: number): string => `${n} file${n === 1 ? '' : 's'}`
   const onto = branch ? ` to ${branch}` : ''
   const commitLabel = amend
-    ? status.staged.length
-      ? `Amend with ${files(status.staged.length)}`
+    ? stagedFiles.length
+      ? `Amend with ${files(stagedFiles.length)}`
       : 'Amend last commit'
     : stageAllFirst
       ? `Stage all and commit ${files(unstagedFiles.length)}${onto}`
-      : status.staged.length
-        ? `Commit ${files(status.staged.length)}${onto}`
+      : stagedFiles.length
+        ? `Commit ${files(stagedFiles.length)}${onto}`
         : 'Commit'
 
   return (
@@ -295,7 +345,7 @@ export function WorkingTree({
           <FileViewToggle />
         </div>
         <div className="meta">
-          {status.staged.length} staged · {status.unstaged.length} unstaged
+          {stagedFiles.length} staged · {changedFiles.length} unstaged
           {status.conflicted.length ? ` · ${status.conflicted.length} conflicted` : ''}
         </div>
       </div>
@@ -343,7 +393,7 @@ export function WorkingTree({
         )}
         <div className="file-group-title">
           <span>Unstaged ({unstagedFiles.length})</span>
-          <button disabled={!!working || !unstagedFiles.length} aria-busy={working === 'stage-all'} onClick={() => stage(unstagedPaths, 'stage-all')}>
+          <button disabled={!unstagedFiles.length} onClick={() => stage(unstagedPaths)}>
             Stage all
           </button>
         </div>
@@ -373,14 +423,14 @@ export function WorkingTree({
           />
         </div>
         <div className="file-group-title">
-          <span>Staged ({status.staged.length})</span>
-          <button disabled={!!working || !status.staged.length} aria-busy={working === 'unstage-all'} onClick={() => unstage(stagedPaths, 'unstage-all')}>
+          <span>Staged ({stagedFiles.length})</span>
+          <button disabled={!stagedFiles.length} onClick={() => unstage(stagedPaths)}>
             Unstage all
           </button>
         </div>
         <div data-area="staged">
           <FileList
-            files={status.staged}
+            files={stagedFiles}
             selectedPath={selectedIn('staged')}
             onSelect={(f) => toggle('staged', f, 'diff')}
             onDoubleClick={(f) => void unstage([f.path])}

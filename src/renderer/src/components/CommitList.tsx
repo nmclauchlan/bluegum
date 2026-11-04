@@ -309,9 +309,11 @@ export function CommitList({
   builds,
   onHeaderMenu,
   searchBar,
-  matches
+  matches,
+  wipSubject = ''
 }: {
   commits: Commit[]
+  wipSubject?: string
   selected: string | null
   onSelect: (hash: string) => void
   onContextMenu: (commit: Commit, e: React.MouseEvent, focus?: { kind: 'branch' | 'remote' | 'tag'; name: string } | null) => void
@@ -501,7 +503,7 @@ export function CommitList({
         {shown('colGraph') && <div className="graph-space" style={{ width: graphCol }} />}
         <div className="subject">
           {builds?.[c.hash] && <BuildMarker builds={builds[c.hash]} />}
-          <span className="text" title={c.subject}>{c.subject}</span>
+          <span className="text" title={isWip ? wipSubject : c.subject}>{isWip ? wipSubject : c.subject}</span>
           {showBodyPreview && c.body && !isWip && (
             <span className="body-preview" title={c.body}>
               {c.body}

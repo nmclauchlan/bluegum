@@ -140,7 +140,27 @@ export function RepoView({
     return () => clearTimeout(t)
   }, [panels])
 
+  const statusRequested = useRef(0)
+  const statusApplied = useRef(0)
+  const applyStatus = useCallback((request: number, s: RepoStatus): void => {
+    if (request < statusApplied.current) return
+    statusApplied.current = request
+    const sj = JSON.stringify(s)
+    if (sj === lastStatusJson.current) return
+    lastStatusJson.current = sj
+    setStatus(s)
+  }, [])
+
+  const lastLogJson = useRef('')
+  const applyLog = (log: Commit[]): void => {
+    const lj = JSON.stringify(log)
+    if (lj === lastLogJson.current) return
+    lastLogJson.current = lj
+    setCommits(log)
+  }
+
   const loadAll = useCallback(async () => {
+    const request = ++statusRequested.current
     const [log, r, s, u, f] = await Promise.all([
       window.git.log(path, LOG_LIMIT, graphFilter),
       window.git.refs(path),
@@ -150,12 +170,23 @@ export function RepoView({
     ])
     setUndoInfo(u)
     setFetchedAt(f)
-    lastRefsJson.current = JSON.stringify(r)
-    lastStatusJson.current = JSON.stringify(s)
-    setCommits(log)
-    setRefs(r)
-    setStatus(s)
-  }, [path, LOG_LIMIT, graphFilter])
+    const rj = JSON.stringify(r)
+    if (rj !== lastRefsJson.current) {
+      lastRefsJson.current = rj
+      setRefs(r)
+    }
+    applyLog(log)
+    applyStatus(request, s)
+  }, [path, LOG_LIMIT, graphFilter, applyStatus])
+
+  const refreshStatus = useCallback(async () => {
+    const request = ++statusRequested.current
+    try {
+      applyStatus(request, await window.git.status(path))
+    } catch {
+      /* the next poll catches up */
+    }
+  }, [path, applyStatus])
 
   const refresh = useCallback(() => {
     loadAll()
@@ -212,18 +243,15 @@ export function RepoView({
     const tick = async (): Promise<void> => {
       if (busy) return
       try {
+        const request = ++statusRequested.current
         const [r, s, f] = await Promise.all([window.git.refs(path), window.git.status(path), window.git.lastFetched(path).catch(() => null)])
         setFetchedAt(f)
         const rj = JSON.stringify(r)
-        const sj = JSON.stringify(s)
-        if (sj !== lastStatusJson.current) {
-          lastStatusJson.current = sj
-          setStatus(s)
-        }
+        applyStatus(request, s)
         if (rj !== lastRefsJson.current) {
           lastRefsJson.current = rj
           setRefs(r)
-          setCommits(await window.git.log(path, LOG_LIMIT, graphFilter))
+          applyLog(await window.git.log(path, LOG_LIMIT, graphFilter))
           setUndoInfo(await window.git.undoInfo(path))
         }
       } catch {
@@ -325,21 +353,16 @@ export function RepoView({
 
   const hasWip = !!status && (status.staged.length > 0 || status.unstaged.length > 0 || !!status.operation)
 
+  const wipSubject = status?.operation
+    ? `${{ merge: 'Merging', 'cherry-pick': 'Cherry-picking', revert: 'Reverting', rebase: 'Rebasing' }[status.operation.kind]}${status.conflicted.length ? ` · ${status.conflicted.length} conflict${status.conflicted.length === 1 ? '' : 's'}` : ''}`
+    : `${(status?.staged.length ?? 0) + (status?.unstaged.length ?? 0)} uncommitted changes`
+  const headHash = refs?.headHash
+
   const rows = useMemo<Commit[]>(() => {
-    if (!hasWip || !refs) return commits
-    const wip: Commit = {
-      hash: WIP_HASH,
-      parents: refs.headHash ? [refs.headHash] : [],
-      author: '',
-      email: '',
-      date: Date.now(),
-      subject: status?.operation
-        ? `${{ merge: 'Merging', 'cherry-pick': 'Cherry-picking', revert: 'Reverting', rebase: 'Rebasing' }[status.operation.kind]}${status.conflicted.length ? ` · ${status.conflicted.length} conflict${status.conflicted.length === 1 ? '' : 's'}` : ''}`
-        : `${(status?.staged.length ?? 0) + (status?.unstaged.length ?? 0)} uncommitted changes`,
-      refs: []
-    }
+    if (!hasWip || headHash === undefined) return commits
+    const wip: Commit = { hash: WIP_HASH, parents: headHash ? [headHash] : [], author: '', email: '', date: Date.now(), subject: '', refs: [] }
     return [wip, ...commits]
-  }, [commits, hasWip, refs, status])
+  }, [commits, hasWip, headHash])
 
   useEffect(() => {
     rowsRef.current = rows
@@ -470,6 +493,7 @@ export function RepoView({
     () => ({
       ...shell,
       refresh,
+      refreshStatus,
       selectHash: (hash) => {
         setSelected(hash)
         setScrollTarget((t) => ({ hash, n: (t?.n ?? 0) + 1 }))
@@ -920,7 +944,7 @@ export function RepoView({
           shell={shell}
           onChange={setViewing}
           onClose={() => setViewing(null)}
-          onSaved={refresh}
+          onSaved={() => void refreshStatus()}
           onShowCommit={(hash) => {
             setViewing(null)
             jumpTo(hash)
@@ -940,6 +964,7 @@ export function RepoView({
       ) : (
         <CommitList
           commits={rows}
+          wipSubject={wipSubject}
           selected={selected}
           onSelect={(hash) => {
             wantHash.current = null

@@ -15,6 +15,7 @@ export interface Shell {
 
 export interface Actions extends Shell {
   refresh(): void
+  refreshStatus(): Promise<void>
   selectHash(hash: string): void
   checkout(ref: string): void
   checkoutTracking(local: string, remote: string): void
