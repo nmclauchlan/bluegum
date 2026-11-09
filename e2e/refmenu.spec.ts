@@ -233,7 +233,7 @@ test('revert and cherry-pick a merge commit, keeping its first parent as the mai
   const base = sha(repo, 'HEAD~1')
   const { page, close } = await launch(repo)
   try {
-    const row = view(page).locator('.commit-row', { hasText: 'Merge develop' })
+    const row = view(page).locator('.commit-row', { has: page.locator('.subject .text', { hasText: /^Merge develop$/ }) })
     await row.locator('.subject').click({ button: 'right' })
     await choose(page, /^Revert commit$/)
     await expect.poll(() => git(repo, 'log', '-1', '--format=%s').trim()).toBe('Revert "Merge develop"')
