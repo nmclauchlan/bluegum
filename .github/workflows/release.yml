@@ -74,4 +74,11 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run build
       - name: Build and publish installers
-        run: npx electron-builder ${{ matrix.args }} --publish always
+        shell: bash
+        run: |
+          for attempt in 1 2 3 4; do
+            npx electron-builder ${{ matrix.args }} --publish always && exit 0
+            echo "Attempt $attempt failed"
+            [ "$attempt" = 4 ] || sleep $((attempt * 30))
+          done
+          exit 1
