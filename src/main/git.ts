@@ -627,13 +627,18 @@ export async function resetTo(path: string, hash: string, mode: 'soft' | 'mixed'
   await git(path).raw(['reset', `--${mode}`, hash])
 }
 
+async function mainlineArgs(path: string, hash: string): Promise<string[]> {
+  const [, ...parents] = (await git(path).raw(['rev-list', '--parents', '-n', '1', hash])).trim().split(' ')
+  return parents.length > 1 ? ['-m', '1'] : []
+}
+
 export async function cherryPick(path: string, hash: string): Promise<void> {
-  await git(path).raw(['cherry-pick', hash])
+  await git(path).raw(['cherry-pick', ...(await mainlineArgs(path, hash)), hash])
   await failOnConflict(path, 'Cherry-pick')
 }
 
 export async function revert(path: string, hash: string): Promise<void> {
-  await git(path).raw(['revert', '--no-edit', hash])
+  await git(path).raw(['revert', '--no-edit', ...(await mainlineArgs(path, hash)), hash])
   await failOnConflict(path, 'Revert')
 }
 

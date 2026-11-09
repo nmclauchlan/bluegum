@@ -226,3 +226,26 @@ test('copy the commit SHA, save a patch and create a worktree', async () => {
     await close()
   }
 })
+
+test('revert and cherry-pick a merge commit, keeping its first parent as the main line', async () => {
+  const { repo } = setup()
+  git(repo, 'merge', '-q', '--no-ff', '-m', 'Merge develop', 'develop')
+  const base = sha(repo, 'HEAD~1')
+  const { page, close } = await launch(repo)
+  try {
+    const row = view(page).locator('.commit-row', { hasText: 'Merge develop' })
+    await row.locator('.subject').click({ button: 'right' })
+    await choose(page, /^Revert commit$/)
+    await expect.poll(() => git(repo, 'log', '-1', '--format=%s').trim()).toBe('Revert "Merge develop"')
+    expect(existsSync(join(repo, 'feature.txt'))).toBe(false)
+
+    git(repo, 'checkout', '-q', '-b', 'target', base)
+    await row.locator('.subject').click({ button: 'right' })
+    await choose(page, /^Cherry-pick commit$/)
+    await expect.poll(() => git(repo, 'log', '-1', '--format=%s').trim()).toBe('Merge develop')
+    expect(git(repo, 'rev-list', '--parents', '-n', '1', 'HEAD').trim().split(' ')).toHaveLength(2)
+    expect(existsSync(join(repo, 'feature.txt'))).toBe(true)
+  } finally {
+    await close()
+  }
+})
