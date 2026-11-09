@@ -35,6 +35,15 @@ jobs:
           cache: npm
       - run: npm install --no-audit --no-fund
       - run: npm run build
+      - name: Download Electron
+        shell: bash
+        run: |
+          for attempt in 1 2 3 4 5; do
+            node node_modules/electron/install.js && exit 0
+            echo "Attempt $attempt failed"
+            [ "$attempt" = 5 ] || sleep $((attempt * 20))
+          done
+          exit 1
       - name: Run end-to-end tests
         run: xvfb-run -a --server-args="-screen 0 1920x1080x24" npx playwright test
         env:
