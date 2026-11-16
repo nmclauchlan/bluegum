@@ -4,7 +4,7 @@ import { prPrefix } from '../util'
 import { pullItems } from '../refMenu'
 import { PULL_LABELS, useSettings } from '../settings'
 import { setPanelCollapsed, useCollapsedPanels, type PanelName } from '../layout'
-import { Icon } from './Icon'
+import { Icon, type IconName } from './Icon'
 
 function PanelIcon({ side, open }: { side: 'left' | 'right'; open: boolean }): React.JSX.Element {
   const x = side === 'left' ? 2.5 : 10
@@ -28,7 +28,8 @@ export function Toolbar({
   onCreatePr,
   onViewPr,
   onSearch,
-  undoInfo
+  undoInfo,
+  done = null
 }: {
   repo: RepoInfo
   refs: RepoRefs | null
@@ -41,7 +42,10 @@ export function Toolbar({
   onViewPr: (pr: PullRequest) => void
   onSearch: () => void
   undoInfo: UndoInfo
+  done?: string | null
 }): React.JSX.Element {
+  const icon = (name: IconName, label: string): React.JSX.Element =>
+    done === label ? <Icon name="check" className="done-tick" /> : <Icon name={name} />
   const mod = /Mac/.test(navigator.platform) ? '⌘' : 'Ctrl+'
   const { pullMode } = useSettings()
   const current = refs?.branches.find((b) => b.current)
@@ -91,14 +95,14 @@ export function Toolbar({
         </button>
       </span>
       <button disabled={busy} aria-busy={busyLabel === 'Fetching'} onClick={actions.fetch} title="git fetch --all --prune">
-        <Icon name="fetch" />
+        {icon('fetch', 'Fetching')}
         Fetch
       </button>
       <span className="split-button">
         <button disabled={busy} aria-busy={busyLabel === 'Pulling'} onClick={() => actions.pull()} title={`Pull (${PULL_LABELS[pullMode].toLowerCase()})`}>
-          <Icon name="pull" />
+          {icon('pull', 'Pulling')}
           Pull
-          {current?.behind ? <span className="badge">{current.behind}</span> : null}
+          {current?.behind ? <span key={current.behind} className="badge">{current.behind}</span> : null}
         </button>
         <button
           className="split-caret"
@@ -114,16 +118,16 @@ export function Toolbar({
         </button>
       </span>
       <button disabled={busy} aria-busy={busyLabel === 'Pushing'} onClick={actions.push} title="git push">
-        <Icon name="push" />
+        {icon('push', 'Pushing')}
         Push
-        {current?.ahead ? <span className="badge">{current.ahead}</span> : null}
+        {current?.ahead ? <span key={current.ahead} className="badge">{current.ahead}</span> : null}
       </button>
       <button disabled={busy} aria-busy={busyLabel === 'Creating branch'} onClick={() => actions.createBranch('HEAD')} title="Create a branch at HEAD">
         <Icon name="branch" />
         Branch
       </button>
       <button disabled={busy} aria-busy={busyLabel === 'Stashing'} onClick={() => actions.stash()} title="Stash your uncommitted changes">
-        <Icon name="stash" />
+        {icon('stash', 'Stashing')}
         Stash
       </button>
       <button
@@ -132,7 +136,7 @@ export function Toolbar({
         onClick={() => actions.stashPop(0)}
         title="git stash pop"
       >
-        <Icon name="pop" />
+        {icon('pop', 'Popping stash')}
         Pop
       </button>
       {host && current && (

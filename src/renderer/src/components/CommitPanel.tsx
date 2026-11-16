@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CommitBuild, CommitDetails, StatusFile } from '@shared/types'
 import { FileList, FileViewToggle } from './FileList'
-import { Loading } from './Spinner'
+import { Skeleton } from './Spinner'
 import { BuildsSection } from './BuildStatus'
 import { Markdown } from './Markdown'
 import { canEdit, type FileViewRequest } from './FileViewer'
@@ -52,11 +52,22 @@ export function CommitPanel({
   const selected = viewing && viewing.source.kind === 'commit' && viewing.source.hash === hash ? viewing.file.path : null
 
   if (error) return <div className="panel"><div className="center">{error}</div></div>
-  if (!details) return <div className="panel"><Loading /></div>
+  if (!details) {
+    return (
+      <div className="panel">
+        <div className="panel-header">
+          <Skeleton lines={3} />
+        </div>
+        <div className="panel-body">
+          <Skeleton lines={5} />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="panel">
-      <div className="panel-header">
+      <div className="panel-header panel-swap" key={`h${details.hash}`}>
         <h3>{details.subject}</h3>
         <div className="meta">
           {details.author} &lt;{details.email}&gt; · {formatFullDate(details.date)}
@@ -72,7 +83,7 @@ export function CommitPanel({
         </div>
         {details.body && <Markdown className="body" text={details.body} />}
       </div>
-      <div className="panel-body">
+      <div className="panel-body panel-swap" key={`b${details.hash}`}>
         <BuildsSection repoPath={repoPath} builds={builds} error={buildsError} />
         <div className="file-group-title">
           <span>{details.files.length} file{details.files.length === 1 ? '' : 's'} changed</span>

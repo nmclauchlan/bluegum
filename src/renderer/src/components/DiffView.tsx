@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { buildPatch, isPartiallyPatchable, parsePatch, type ParsedPatch } from '@shared/patch'
-import { Loading } from './Spinner'
+import { Skeleton } from './Spinner'
+import { useSlidingIndicator } from '../motion'
 import { setDiffPrefs, useDiffPrefs } from '../diffPrefs'
 import { wordDiff, type Range } from '../wordDiff'
 
@@ -172,6 +173,7 @@ export function DiffView({
   const [busy, setBusy] = useState(false)
   const [shownText, setShownText] = useState(text)
   const root = useRef<HTMLDivElement>(null)
+  const layoutTabs = useSlidingIndicator('button.active')
   if (shownText !== text) {
     setShownText(text)
     setSelected(new Set())
@@ -261,7 +263,7 @@ export function DiffView({
     </tr>
   )
 
-  if (loading) return <div className="diff"><Loading className="placeholder" /></div>
+  if (loading) return <div className="diff"><Skeleton lines={8} code /></div>
   if (!text.trim()) return <div className="diff"><div className="placeholder">{empty ?? 'No changes'}</div></div>
   return (
     <div
@@ -307,7 +309,7 @@ export function DiffView({
               <input type="checkbox" checked={wrap} onChange={(e) => setDiffPrefs({ wrap: e.target.checked })} /> Wrap
             </label>
           )}
-          <span className="view-tabs" role="tablist" aria-label="Diff layout">
+          <span className="view-tabs" ref={layoutTabs} role="tablist" aria-label="Diff layout">
             <button role="tab" aria-selected={!split} className={split ? '' : 'active'} onClick={() => setDiffPrefs({ split: false })}>
               Unified
             </button>

@@ -26,6 +26,8 @@ import { useCommands, type Command } from './commands'
 
 const PAGE_ROWS = 15
 const PANEL_MS = 260
+const DONE_MS = 1400
+const INTRO_MS = 900
 const BUILD_COMMITS = 50
 const BUILD_LOOKUPS = 150
 
@@ -60,6 +62,8 @@ export function RepoView({
   const rowsRef = useRef<Commit[]>([])
   const [rebasing, setRebasing] = useState<{ base: string; preset?: Record<string, RebaseAction> } | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
+  const [done, setDone] = useState<string | null>(null)
+  const [intro, setIntro] = useState(true)
   const [viewing, setViewing] = useState<FileViewRequest | null>(null)
   const [comparing, setComparing] = useState<CompareRequest | null>(null)
   const [stashing, setStashing] = useState<{ paths?: string[] } | null>(null)
@@ -431,6 +435,7 @@ export function RepoView({
       setBusy(label)
       try {
         await fn()
+        setDone(label)
         if (successMessage) shell.showInfo(successMessage)
       } catch (e) {
         shell.showError(errorMessage(e), `${label} failed`)
@@ -446,6 +451,18 @@ export function RepoView({
     },
     [refresh, refreshPrs, refreshBuilds, shell]
   )
+
+  useEffect(() => {
+    if (!done) return
+    const t = setTimeout(() => setDone(null), DONE_MS)
+    return () => clearTimeout(t)
+  }, [done])
+
+  useEffect(() => {
+    if (!intro || !commits.length) return
+    const t = setTimeout(() => setIntro(false), INTRO_MS)
+    return () => clearTimeout(t)
+  }, [intro, commits.length])
 
   const forcePushWarning = (branch: string): string =>
     `Force pushing replaces the remote copy of ${branch} with yours. Blue Gum uses --force-with-lease, so it refuses if someone else has pushed there since you last fetched.`
@@ -910,6 +927,7 @@ export function RepoView({
         onViewPr={(pr) => setSelectedPr(pr)}
         onSearch={openSearch}
         undoInfo={undoInfo}
+        done={done}
       />
       {refs ? (
         <Sidebar
@@ -965,6 +983,7 @@ export function RepoView({
         <CommitList
           commits={rows}
           wipSubject={wipSubject}
+          intro={intro}
           selected={selected}
           onSelect={(hash) => {
             wantHash.current = null

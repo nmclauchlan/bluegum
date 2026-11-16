@@ -292,6 +292,10 @@ export default function App(): React.JSX.Element {
     }
   }
 
+  const [bell, setBell] = useState({ count: unseenCount, rings: 0 })
+  if (bell.count !== unseenCount) setBell({ count: unseenCount, rings: unseenCount > bell.count ? bell.rings + 1 : bell.rings })
+  const bellRings = bell.rings
+
   const closeNotifications = (): void => {
     setNotifOpen(null)
     setClearUndo(NO_UNDO)
@@ -850,8 +854,10 @@ export default function App(): React.JSX.Element {
           aria-expanded={!!notifOpen}
           onClick={openNotifications}
         >
-          <BellIcon />
-          {unseenCount > 0 && <span className="notif-badge">{unseenCount > 99 ? '99+' : unseenCount}</span>}
+          <span key={bellRings} className={bellRings ? 'bell ringing' : 'bell'}>
+            <BellIcon />
+          </span>
+          {unseenCount > 0 && <span key={unseenCount} className="notif-badge">{unseenCount > 99 ? '99+' : unseenCount}</span>}
         </button>
         <button className="icon titlebar-btn" title="Settings (Ctrl+,)" aria-label="Settings" onClick={() => setSettingsOpen({})}>
           <Icon name="settings" />

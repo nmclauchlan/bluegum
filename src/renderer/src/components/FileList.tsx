@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { StatusFile } from '@shared/types'
 import { setFileView, useFileView } from '../fileView'
 import { Icon } from './Icon'
+import { useSlidingIndicator } from '../motion'
 
 const ARRIVE_MS = 900
 const NONE: ReadonlySet<string> = new Set()
@@ -54,8 +55,9 @@ export function FileRow({
 
 export function FileViewToggle(): React.JSX.Element {
   const view = useFileView()
+  const indicator = useSlidingIndicator('button.active')
   return (
-    <span className="view-toggle" title="Switch between tree and flat file lists">
+    <span className="view-toggle" ref={indicator} title="Switch between tree and flat file lists">
       <button className={view === 'tree' ? 'active' : ''} onClick={() => setFileView('tree')}>
         Tree
       </button>

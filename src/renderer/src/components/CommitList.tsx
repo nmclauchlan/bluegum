@@ -310,10 +310,12 @@ export function CommitList({
   onHeaderMenu,
   searchBar,
   matches,
-  wipSubject = ''
+  wipSubject = '',
+  intro = false
 }: {
   commits: Commit[]
   wipSubject?: string
+  intro?: boolean
   selected: string | null
   onSelect: (hash: string) => void
   onContextMenu: (commit: Commit, e: React.MouseEvent, focus?: { kind: 'branch' | 'remote' | 'tag'; name: string } | null) => void
@@ -489,7 +491,7 @@ export function CommitList({
         aria-selected={selected === c.hash}
         data-hash={c.hash}
         className={`commit-row${selected === c.hash ? ' selected' : ''}${isWip ? ' wip' : ''}${matches?.has(c.hash) ? ' match' : ''}${fresh.has(c.hash) ? ' fresh' : ''}${landed === c.hash ? ' landed' : ''}`}
-        style={{ top: i * ROW_H }}
+        style={{ top: i * ROW_H, '--i': i - start } as React.CSSProperties}
         onClick={() => onSelect(c.hash)}
         onContextMenu={(e) => {
           e.preventDefault()
@@ -539,7 +541,7 @@ export function CommitList({
   }
 
   return (
-    <div className={`commit-list${matches ? ' searching' : ''}`} ref={listRef}>
+    <div className={`commit-list${matches ? ' searching' : ''}${intro ? ' intro' : ''}`} ref={listRef}>
       {searchBar}
       <Header
         graphCol={graphCol}

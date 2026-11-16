@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSlidingIndicator } from '../motion'
 import { isImageFile, type ImageSource, type StatusFile } from '@shared/types'
 import type { Shell } from '../actions'
 import { ConflictResolver } from './ConflictResolver'
@@ -50,6 +51,7 @@ export function FileViewer({
 }): React.JSX.Element {
   const { file, source, mode } = request
   const [diff, setDiff] = useState('')
+  const viewTabs = useSlidingIndicator('button.active')
   const [loading, setLoading] = useState(false)
   const image = isImageFile(file.path)
   const sourceKey = JSON.stringify(source)
@@ -103,7 +105,7 @@ export function FileViewer({
         </span>
         <span className="muted">{sourceLabel(source)}</span>
         {(mode === 'diff' || mode === 'history' || mode === 'blame') && file.status !== '?' && (
-          <span className="view-tabs" role="tablist" aria-label="File view">
+          <span className="view-tabs" ref={viewTabs} role="tablist" aria-label="File view">
             {VIEW_TABS.filter((t) => t.mode !== 'blame' || (!image && file.status !== 'D')).map((t) => (
               <button key={t.mode} role="tab" aria-selected={mode === t.mode} className={mode === t.mode ? 'active' : ''} onClick={() => onChange({ ...request, mode: t.mode })}>
                 {t.label}
@@ -140,7 +142,7 @@ export function FileViewer({
       ) : image ? (
         <ImageDiff key={sourceKey + file.path} repoPath={repoPath} file={file.path} oldPath={file.oldPath} source={source} />
       ) : (
-        <DiffView text={diff} loading={loading} empty="No textual changes" modes={modes} onApply={applyPatch} />
+        <DiffView key={`${file.path}:${sourceKey}`} text={diff} loading={loading} empty="No textual changes" modes={modes} onApply={applyPatch} />
       )}
     </div>
   )

@@ -26,13 +26,13 @@ function Tracking({ branch }: { branch: Branch }): React.JSX.Element {
     <>
       <span className="sync-upstream">→ {branch.upstream}</span>
       {ahead > 0 && (
-        <span className="sync-ahead" title={`${plural(ahead, 'commit')} to push`} aria-label={`${ahead} to push`}>
+        <span key={`a${ahead}`} className="sync-ahead" title={`${plural(ahead, 'commit')} to push`} aria-label={`${ahead} to push`}>
           <Icon name="push" size={11} />
           {ahead}
         </span>
       )}
       {behind > 0 && (
-        <span className="sync-behind" title={`${plural(behind, 'commit')} to pull`} aria-label={`${behind} to pull`}>
+        <span key={`b${behind}`} className="sync-behind" title={`${plural(behind, 'commit')} to pull`} aria-label={`${behind} to pull`}>
           <Icon name="pull" size={11} />
           {behind}
         </span>

@@ -6,6 +6,7 @@ import { GroupColorDialog } from './GroupColorDialog'
 import { copyToClipboard, revealInFolder, revealLabel } from '../util'
 import { Icon } from './Icon'
 import { focusItem, listKeys, navItems, useRovingFocus } from '../keynav'
+import { useSlidingIndicator } from '../motion'
 
 type DropHint = { path: string; after: boolean } | { group: string; after?: boolean } | null
 type Dragging = { kind: 'tab'; path: string } | { kind: 'group'; id: string } | null
@@ -64,14 +65,16 @@ export function TabBar({
   const groupChips = useRef(new Map<string, HTMLDivElement>())
   const scroller = useRef<HTMLDivElement>(null)
   const tabsNav = useRovingFocus<HTMLDivElement>()
+  const activeBar = useSlidingIndicator('.tab.active, .tab-group.has-active')
   const groupNav = useRovingFocus<HTMLDivElement>()
   const openedByKey = useRef(false)
   const tabsRef = useCallback(
     (el: HTMLDivElement | null) => {
       scroller.current = el
       tabsNav(el)
+      activeBar(el)
     },
-    [tabsNav]
+    [tabsNav, activeBar]
   )
   const dropdownRef = useCallback(
     (el: HTMLDivElement | null) => {
