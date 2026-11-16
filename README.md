@@ -273,7 +273,7 @@ The suite covers:
 - Markdown rendering;
 - the update menu.
 
-CI runs it on every push.
+CI runs it on every push, alongside `npm audit`, the type checks and a build. A release is only published when all of them pass, and the audit fails on any high or critical vulnerability.
 
 ### Layout
 
