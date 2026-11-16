@@ -120,7 +120,7 @@ export async function confirmDialog(page: Page, ok = true): Promise<void> {
 }
 
 export async function menuItem(page: Page, text: string | RegExp): Promise<void> {
-  await page.locator('.context-menu .item', { hasText: text }).first().click()
+  await page.locator(':is(.context-menu-root:not([data-closing]), .submenu-layer) .item', { hasText: text }).first().click()
 }
 
 export async function recordBusy(page: Page): Promise<void> {

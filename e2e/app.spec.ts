@@ -36,7 +36,7 @@ test('themes are grouped into dark and light, and can be picked from the View me
 
     await page.getByRole('menuitem', { name: 'View' }).click()
     await page.locator('.menubar-entry', { hasText: 'Theme…' }).click()
-    const menu = page.locator('.context-menu-root > .context-menu')
+    const menu = page.locator('.context-menu-root:not([data-closing]) > .context-menu')
     const labels = await menu.locator(':scope > .item .label').allInnerTexts()
     expect(labels).toHaveLength(23)
     expect(labels.indexOf('High Contrast Dark')).toBeLessThan(labels.indexOf('Blue Gum Light'))

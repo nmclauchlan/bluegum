@@ -14,7 +14,7 @@ test('the status bar shows the version, with update options on right-click', asy
     await expect(label).toHaveText(`v${version}`)
 
     await label.click({ button: 'right' })
-    const items = page.locator('.context-menu-root .item')
+    const items = page.locator('.context-menu-root:not([data-closing]) .item')
     await expect(items.locator('.label')).toHaveText(['Check for updates', 'Release notes', 'Copy version'])
     await items.filter({ hasText: 'Copy version' }).click()
     await expect(page.locator('.toast')).toContainText(`Copied ${version}`)

@@ -23,13 +23,13 @@ function setup(): { root: string; repo: string; remote: string; other: string } 
 
 async function badgeMenu(page: Page, name: string): Promise<void> {
   await view(page).locator('.refs-cell > .ref-badge', { hasText: name }).first().click({ button: 'right' })
-  await expect(page.locator('.context-menu-root')).toBeVisible()
+  await expect(page.locator('.context-menu-root:not([data-closing])')).toBeVisible()
 }
 
 const exact = (s: string): RegExp => new RegExp(`^${s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`)
 
 async function choose(page: Page, label: string | RegExp, submenu?: string | RegExp): Promise<void> {
-  const root = page.locator('.context-menu-root > .context-menu > .item')
+  const root = page.locator('.context-menu-root:not([data-closing]) > .context-menu > .item')
   if (submenu) {
     const item = page.locator('.submenu-layer .item', { hasText: submenu }).first()
     await expect(async () => {
@@ -47,7 +47,7 @@ test('the branch menu offers GitKraken-style actions and fast-forwards with undo
   const { page, close } = await launch(repo)
   try {
     await badgeMenu(page, 'develop')
-    const labels = await page.locator('.context-menu-root > .context-menu > .item .label').allTextContents()
+    const labels = await page.locator('.context-menu-root:not([data-closing]) > .context-menu > .item .label').allTextContents()
     expect(labels).toEqual([
       'Checkout develop', 'Merge develop into main', 'Rebase main onto develop', 'Merge options',
       'Pull (fast-forward)', 'Push',
@@ -55,7 +55,7 @@ test('the branch menu offers GitKraken-style actions and fast-forwards with undo
       'Compare', 'Create', 'Copy', 'Filter graph',
       'Branch develop'
     ])
-    await page.locator('.context-menu-root > .context-menu > .item', { hasText: /^Branch develop$/ }).hover()
+    await page.locator('.context-menu-root:not([data-closing]) > .context-menu > .item', { hasText: /^Branch develop$/ }).hover()
     await expect(page.locator('.submenu-layer .item .label')).toHaveText([
       'Rename…', 'Set upstream…', 'Force push (with lease)…', 'Delete develop', 'Delete origin/develop', 'Delete develop and origin/develop'
     ])
@@ -116,7 +116,7 @@ test('check out a remote branch whose local copy is behind it', async () => {
   const { page, close } = await launch(repo)
   try {
     await view(page).locator('.ref-badge[data-ref-kind="remote"][data-ref-name="origin/develop"]').first().click({ button: 'right' })
-    const item = page.locator('.context-menu-root > .context-menu > .item', { hasText: /^Checkout origin\/develop/ })
+    const item = page.locator('.context-menu-root:not([data-closing]) > .context-menu > .item', { hasText: /^Checkout origin\/develop/ })
     await expect(item.locator('.hint')).toHaveText('as develop, fast-forwarded')
     await item.click()
     await expect.poll(() => sha(repo, 'refs/heads/develop')).toBe(remoteTip)

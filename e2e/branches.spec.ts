@@ -73,7 +73,7 @@ test('delete a branch from its context menu and restore it with undo', async () 
     await v.locator('.sidebar .ref-item', { hasText: 'old-work' }).click({ button: 'right' })
     const remove = page.locator('.submenu-layer .item', { hasText: 'Delete old-work' })
     await expect(async () => {
-      await page.locator('.context-menu-root > .context-menu > .item', { hasText: /^Branch old-work$/ }).hover()
+      await page.locator('.context-menu-root:not([data-closing]) > .context-menu > .item', { hasText: /^Branch old-work$/ }).hover()
       await expect(remove).toBeInViewport({ timeout: 1000 })
     }).toPass()
     await remove.click()

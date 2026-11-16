@@ -15,7 +15,7 @@ async function compareFrom(page: Page, open: () => Promise<void>, item: string |
   await open()
   const entry = page.locator('.submenu-layer .item', { hasText: item }).first()
   await expect(async () => {
-    await page.locator('.context-menu-root > .context-menu > .item', { hasText: /^Compare/ }).first().hover()
+    await page.locator('.context-menu-root:not([data-closing]) > .context-menu > .item', { hasText: /^Compare/ }).first().hover()
     await expect(entry).toBeInViewport({ timeout: 1000 })
   }).toPass()
   await entry.click()

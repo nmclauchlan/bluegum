@@ -39,7 +39,7 @@ test('file history follows renames and blame attributes each line to its commit'
 
     await v.locator('.commit-row.wip').click()
     await v.locator('.file-item', { hasText: 'guide.md' }).click({ button: 'right' })
-    await page.locator('.context-menu-root .item', { hasText: 'Blame' }).click()
+    await page.locator('.context-menu-root:not([data-closing]) .item', { hasText: 'Blame' }).click()
     await expect(tabs.getByRole('tab', { name: 'Blame' })).toHaveAttribute('aria-selected', 'true')
     const rows = v.locator('.blame tr')
     await expect(rows).toHaveCount(3)
@@ -52,7 +52,7 @@ test('file history follows renames and blame attributes each line to its commit'
     await expect(v.locator('.commit-row.selected')).toHaveAttribute('data-hash', bob)
 
     await v.locator('.panel .file-item', { hasText: 'notes.md' }).click({ button: 'right' })
-    await page.locator('.context-menu-root .item', { hasText: 'Blame' }).click()
+    await page.locator('.context-menu-root:not([data-closing]) .item', { hasText: 'Blame' }).click()
     await expect(v.locator('.file-viewer .muted').first()).toContainText(bob.slice(0, 7))
     await expect(rows).toHaveCount(3)
     await expect(rows.nth(0).locator('.blame-info')).toContainText('E2E Tester')

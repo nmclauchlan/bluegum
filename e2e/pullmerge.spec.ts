@@ -8,7 +8,7 @@ const parents = (repo: string, rev = 'HEAD'): string[] => git(repo, 'rev-list', 
 async function submenu(page: Page, parent: string | RegExp, item: string | RegExp): Promise<void> {
   const entry = page.locator('.submenu-layer .item', { hasText: item }).first()
   await expect(async () => {
-    await page.locator('.context-menu-root > .context-menu > .item', { hasText: parent }).first().hover()
+    await page.locator('.context-menu-root:not([data-closing]) > .context-menu > .item', { hasText: parent }).first().hover()
     await expect(entry).toBeInViewport({ timeout: 1000 })
   }).toPass()
   await entry.click()

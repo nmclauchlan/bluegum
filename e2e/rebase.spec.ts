@@ -22,7 +22,7 @@ async function commitMenu(page: Page, subject: string, item: string): Promise<vo
   await view(page).locator('.commit-row', { hasText: subject }).locator('.subject').click({ button: 'right' })
   const entry = page.locator('.submenu-layer .item', { hasText: item })
   await expect(async () => {
-    await page.locator('.context-menu-root > .context-menu > .item', { hasText: /^Edit history$/ }).hover()
+    await page.locator('.context-menu-root:not([data-closing]) > .context-menu > .item', { hasText: /^Edit history$/ }).hover()
     await expect(entry).toBeInViewport({ timeout: 1000 })
   }).toPass()
   await entry.click()

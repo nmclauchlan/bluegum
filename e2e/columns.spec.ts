@@ -42,7 +42,7 @@ test('double-clicking a column edge fits it, drags never push columns off screen
     expect(await view(page).locator('.commit-header .hcell.subject').evaluate((e) => e.getBoundingClientRect().width)).toBeGreaterThanOrEqual(119)
 
     await view(page).locator('.commit-header .hcell.subject').click({ button: 'right' })
-    await page.locator('.context-menu-root .item', { hasText: 'Reset columns' }).click()
+    await page.locator('.context-menu-root:not([data-closing]) .item', { hasText: 'Reset columns' }).click()
     await expect.poll(() => width(page, 'colAuthor')).toBe(110)
     await expect.poll(() => width(page, 'colDate')).toBe(90)
   } finally {
@@ -60,7 +60,7 @@ test('the header menu hides and shows columns, and the message column stays the 
     const others = await header.locator('.hcell[data-col]').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().width))
     expect(message).toBeGreaterThan(Math.max(...others))
 
-    const items = page.locator('.context-menu-root .item')
+    const items = page.locator('.context-menu-root:not([data-closing]) .item')
     await header.locator('.hcell.subject').click({ button: 'right' })
     await expect(items.locator('.label')).toHaveText(['Branch / Tag', 'Graph', 'Message', 'Author', 'Date', 'SHA', 'Fit all columns to content', 'Reset columns'])
     await expect(items.filter({ hasText: 'Message' })).toHaveAttribute('aria-disabled', 'true')
