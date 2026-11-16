@@ -1077,7 +1077,6 @@ button[aria-busy='true']::before { margin-right: 6px; vertical-align: -1px; }
 .commit-row.landed { animation: commit-landed 1.2s var(--ease-out); }
 .file-item.entering { animation: row-enter var(--motion-normal) var(--ease-out), row-flash 900ms ease-out; }
 .section-body { animation: section-enter var(--motion-normal) var(--ease-out); }
-.submenu-layer .context-menu { animation-name: submenu-enter; }
 .toast.leaving { animation: toast-leave var(--motion-fast) ease-in forwards; pointer-events: none; }
 .tabs-scroll > .tab, .tabs-scroll > .tab-group { animation: tab-enter var(--motion-normal) var(--ease-out); }
 .diff.patchable td.selectable { transition: box-shadow var(--motion-fast) ease; }
@@ -1085,9 +1084,8 @@ button[aria-busy='true']::before { margin-right: 6px; vertical-align: -1px; }
 .disclosure.open { transform: rotate(90deg); }
 .disclosure-flip.open { transform: rotate(180deg); }
 
-.context-menu-root > .context-menu { transform-origin: var(--menu-origin, top left); animation: menu-pop var(--motion-normal) var(--ease-out); }
-.menubar-item > .menubar-dropdown { transform-origin: top left; animation: menu-pop var(--motion-normal) var(--ease-out); }
-.submenu-layer .context-menu { transform-origin: top left; }
+.context-menu-root > .context-menu, .menubar-item > .menubar-dropdown { animation: menu-reveal var(--motion-normal) var(--ease-out); }
+.submenu-layer .context-menu { --menu-clip: 0 60% 0 0; animation: menu-reveal var(--motion-normal) var(--ease-out); }
 
 .view-tabs, .view-toggle, .tabs-scroll { position: relative; }
 .view-tabs.has-indicator::before, .view-toggle.has-indicator::before {
@@ -1146,9 +1144,9 @@ button[aria-busy='true']::before { margin-right: 6px; vertical-align: -1px; }
 
 .commit-row, .file-item, .dir-item, .sidebar .ref-item, .repo-row, .group-row, .clone-row, .file-history-item { transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease; }
 
-@keyframes menu-pop {
-  from { opacity: 0; transform: scale(0.94); }
-  to { opacity: 1; transform: none; }
+@keyframes menu-reveal {
+  from { opacity: 0; clip-path: inset(var(--menu-clip, 0 70% 70% 0) round 6px); }
+  to { opacity: 1; clip-path: inset(-32px round 6px); }
 }
 
 @keyframes count-pop {
@@ -1218,10 +1216,6 @@ button[aria-busy='true']::before { margin-right: 6px; vertical-align: -1px; }
   to { opacity: 1; transform: none; }
 }
 
-@keyframes submenu-enter {
-  from { opacity: 0; transform: translateX(-4px); }
-  to { opacity: 1; transform: none; }
-}
 
 @keyframes toast-leave {
   to { opacity: 0; transform: translateY(6px); }

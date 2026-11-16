@@ -31,10 +31,12 @@ const exact = (s: string): RegExp => new RegExp(`^${s.replace(/[.*+?^${}()|[\]\\
 async function choose(page: Page, label: string | RegExp, submenu?: string | RegExp): Promise<void> {
   const root = page.locator('.context-menu-root > .context-menu > .item')
   if (submenu) {
-    await root.filter({ has: page.locator('.label', { hasText: typeof label === 'string' ? exact(label) : label }) }).first().hover()
     const item = page.locator('.submenu-layer .item', { hasText: submenu }).first()
-    await expect(item).toBeInViewport()
-    await item.click()
+    await expect(async () => {
+      await root.filter({ has: page.locator('.label', { hasText: typeof label === 'string' ? exact(label) : label }) }).first().hover()
+      await expect(item).toBeInViewport({ timeout: 1000 })
+      await item.click({ timeout: 2000 })
+    }).toPass()
   } else {
     await root.filter({ has: page.locator('.label', { hasText: label }) }).first().click()
   }

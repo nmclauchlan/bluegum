@@ -217,7 +217,7 @@ function Submenu({
 
 export function ContextMenu({ menu, onClose }: { menu: MenuState | null; onClose: () => void }): React.JSX.Element | null {
   const ref = useRef<HTMLDivElement>(null)
-  const [pos, setPos] = useState({ x: 0, y: 0, origin: 'top left' })
+  const [pos, setPos] = useState({ x: 0, y: 0, clip: '0 70% 70% 0' })
   const [layer, setLayer] = useState<HTMLDivElement | null>(null)
 
   useLayoutEffect(() => {
@@ -226,7 +226,9 @@ export function ContextMenu({ menu, onClose }: { menu: MenuState | null; onClose
     const rect = (el ?? ref.current).getBoundingClientRect()
     const x = Math.max(4, Math.min(menu.x, window.innerWidth - rect.width - 4))
     const y = Math.max(4, Math.min(menu.above ? menu.y - rect.height - 4 : menu.y, window.innerHeight - rect.height - 4))
-    setPos({ x, y, origin: `${y < menu.y ? 'bottom' : 'top'} ${x < menu.x ? 'right' : 'left'}` })
+    const up = y < menu.y
+    const left = x < menu.x
+    setPos({ x, y, clip: `${up ? '70%' : '0'} ${left ? '0' : '70%'} ${up ? '0' : '70%'} ${left ? '70%' : '0'}` })
   }, [menu])
 
   useLayoutEffect(() => {
@@ -257,7 +259,7 @@ export function ContextMenu({ menu, onClose }: { menu: MenuState | null; onClose
   if (!menu) return null
   return (
     <>
-      <div ref={ref} className="context-menu-root" style={{ left: pos.x, top: pos.y, '--menu-origin': pos.origin } as React.CSSProperties}>
+      <div ref={ref} className="context-menu-root" style={{ left: pos.x, top: pos.y, '--menu-clip': pos.clip } as React.CSSProperties}>
         <LayerContext.Provider value={layer}>
           <MenuList key={`${menu.x},${menu.y}`} items={menu.items} onClose={onClose} autoFocus />
         </LayerContext.Provider>
