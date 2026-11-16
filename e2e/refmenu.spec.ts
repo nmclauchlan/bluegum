@@ -26,10 +26,12 @@ async function badgeMenu(page: Page, name: string): Promise<void> {
   await expect(page.locator('.context-menu-root')).toBeVisible()
 }
 
+const exact = (s: string): RegExp => new RegExp(`^${s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`)
+
 async function choose(page: Page, label: string | RegExp, submenu?: string | RegExp): Promise<void> {
   const root = page.locator('.context-menu-root > .context-menu > .item')
   if (submenu) {
-    await root.filter({ hasText: label }).first().hover()
+    await root.filter({ has: page.locator('.label', { hasText: typeof label === 'string' ? exact(label) : label }) }).first().hover()
     const item = page.locator('.submenu-layer .item', { hasText: submenu }).first()
     await expect(item).toBeInViewport()
     await item.click()
@@ -44,15 +46,18 @@ test('the branch menu offers GitKraken-style actions and fast-forwards with undo
   try {
     await badgeMenu(page, 'develop')
     const labels = await page.locator('.context-menu-root > .context-menu > .item .label').allTextContents()
-    for (const expected of [
-      'Pull (fast-forward)', 'Push', 'Set upstream…', 'Fast-forward main to develop', 'Merge develop into main', 'Rebase main onto develop',
-      'Checkout', 'Create worktree from', 'Create branch here…', 'Cherry-pick commit', 'Reset main to this commit', 'Revert commit',
-      'Rename develop…', 'Delete develop', 'Delete origin/develop', 'Delete develop and origin/develop',
-      'Copy branch name', 'Copy commit SHA', 'Create patch from commit…', 'Solo', 'Hide', 'Create tag here…', 'Create annotated tag here…'
-    ]) {
-      expect(labels, `menu should include ${expected}`).toContain(expected)
-    }
-    await choose(page, /^Fast-forward main to develop$/)
+    expect(labels).toEqual([
+      'Checkout develop', 'Merge develop into main', 'Rebase main onto develop', 'Merge options',
+      'Pull (fast-forward)', 'Push',
+      'Create branch here…', 'Cherry-pick commit', 'Revert commit', 'Reset main to this commit',
+      'Compare', 'Create', 'Copy', 'Filter graph',
+      'Branch develop'
+    ])
+    await page.locator('.context-menu-root > .context-menu > .item', { hasText: /^Branch develop$/ }).hover()
+    await expect(page.locator('.submenu-layer .item .label')).toHaveText([
+      'Rename…', 'Set upstream…', 'Force push (with lease)…', 'Delete develop', 'Delete origin/develop', 'Delete develop and origin/develop'
+    ])
+    await choose(page, 'Merge options', /^Fast-forward main to develop$/)
     await expect.poll(() => sha(repo, 'main')).toBe(sha(repo, 'develop'))
     await view(page).getByRole('button', { name: 'Undo' }).click()
     await expect.poll(() => sha(repo, 'main')).not.toBe(sha(repo, 'develop'))
@@ -91,7 +96,7 @@ test('checkout from the submenu and pull a branch that is not checked out', asyn
     expect(git(repo, 'rev-parse', '--abbrev-ref', 'HEAD').trim()).toBe('main')
 
     await badgeMenu(page, 'develop')
-    await choose(page, 'Checkout', /^develop$/)
+    await choose(page, /^Checkout develop$/)
     await expect.poll(() => git(repo, 'rev-parse', '--abbrev-ref', 'HEAD').trim()).toBe('develop')
   } finally {
     await close()
@@ -109,9 +114,7 @@ test('check out a remote branch whose local copy is behind it', async () => {
   const { page, close } = await launch(repo)
   try {
     await view(page).locator('.ref-badge[data-ref-kind="remote"][data-ref-name="origin/develop"]').first().click({ button: 'right' })
-    await page.locator('.context-menu-root > .context-menu > .item', { hasText: /^Checkout/ }).first().hover()
-    const item = page.locator('.submenu-layer .item', { hasText: 'origin/develop' })
-    await expect(item).toBeInViewport()
+    const item = page.locator('.context-menu-root > .context-menu > .item', { hasText: /^Checkout origin\/develop/ })
     await expect(item.locator('.hint')).toHaveText('as develop, fast-forwarded')
     await item.click()
     await expect.poll(() => sha(repo, 'refs/heads/develop')).toBe(remoteTip)
@@ -127,12 +130,12 @@ test('rename a branch and delete its remote copy', async () => {
   const { page, close } = await launch(repo)
   try {
     await badgeMenu(page, 'develop')
-    await choose(page, /^Delete origin\/develop$/)
+    await choose(page, 'Branch develop', /^Delete origin\/develop$/)
     await confirmDialog(page, true)
     await expect.poll(() => git(remote, 'branch', '--list', 'develop').trim()).toBe('')
 
     await badgeMenu(page, 'develop')
-    await choose(page, /^Rename develop…$/)
+    await choose(page, 'Branch develop', /^Rename…$/)
     await answerPrompt(page, 'development')
     await expect.poll(() => sha(repo, 'refs/heads/development')).not.toBe('')
     expect(sha(repo, 'refs/heads/develop')).toBe('')
@@ -147,12 +150,12 @@ test('create, push and delete tags from the commit menu', async () => {
   try {
     const row = view(page).locator('.commit-row', { hasText: 'Develop work' })
     await row.locator('.subject').click({ button: 'right' })
-    await choose(page, /^Create tag here…$/)
+    await choose(page, 'Create', /^Tag here…$/)
     await answerPrompt(page, 'v2.0.0')
     await expect.poll(() => sha(repo, 'refs/tags/v2.0.0')).toBe(sha(repo, 'develop'))
 
     await row.locator('.subject').click({ button: 'right' })
-    await choose(page, /^Create annotated tag here…$/)
+    await choose(page, 'Create', /^Annotated tag here…$/)
     await answerPrompt(page, 'v2.0.1')
     await answerPrompt(page, 'Second release')
     await expect.poll(() => (sha(repo, 'refs/tags/v2.0.1') ? git(repo, 'cat-file', '-t', 'v2.0.1').trim() : '')).toBe('tag')
@@ -181,14 +184,14 @@ test('solo a branch, then show all branches again', async () => {
     const v = view(page)
     await expect(v.locator('.commit-row', { hasText: 'Other branch work' })).toBeVisible()
     await badgeMenu(page, 'develop')
-    await choose(page, 'Solo', /^develop$/)
+    await choose(page, 'Filter graph', /^Show only develop$/)
     await expect(v.locator('.graph-filter-note')).toContainText('Showing only develop')
     await expect(v.locator('.commit-row', { hasText: 'Other branch work' })).toHaveCount(0)
     await v.locator('.graph-filter-note').getByRole('button', { name: 'Show all' }).click()
     await expect(v.locator('.commit-row', { hasText: 'Other branch work' })).toBeVisible()
 
     await badgeMenu(page, 'other-work')
-    await choose(page, 'Hide', /^other-work$/)
+    await choose(page, 'Filter graph', /^Hide other-work$/)
     await expect(v.locator('.graph-filter-note')).toContainText('Hiding other-work')
     await expect(v.locator('.commit-row', { hasText: 'Other branch work' })).toHaveCount(0)
     await expect(v.locator('.commit-row', { hasText: 'Develop work' })).toBeVisible()
@@ -209,16 +212,16 @@ test('copy the commit SHA, save a patch and create a worktree', async () => {
 
     const row = view(page).locator('.commit-row', { hasText: 'Develop work' })
     await row.locator('.subject').click({ button: 'right' })
-    await choose(page, /^Copy commit SHA$/)
+    await choose(page, 'Copy', /^Commit SHA$/)
     await expect.poll(() => app.evaluate(({ clipboard }) => clipboard.readText())).toBe(sha(repo, 'develop'))
 
     await row.locator('.subject').click({ button: 'right' })
-    await choose(page, /^Create patch from commit…$/)
+    await choose(page, 'Create', /^Patch from commit…$/)
     await expect(page.locator('.toast')).toContainText('Saved patch')
     expect(readFileSync(patchFile, 'utf8')).toContain('Subject: [PATCH] Develop work')
 
     await row.locator('.subject').click({ button: 'right' })
-    await choose(page, 'Create worktree from', /^develop$/)
+    await choose(page, 'Create', /^Worktree from develop$/)
     await answerPrompt(page, 'repo-develop-wt')
     await expect(page.locator('.tabs .tab', { hasText: 'repo-develop-wt' })).toBeVisible({ timeout: 15_000 })
     expect(existsSync(join(root, 'repo-develop-wt', 'feature.txt'))).toBe(true)
