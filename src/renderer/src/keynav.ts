@@ -209,7 +209,8 @@ export function useKeyboardShell(): void {
       returns.delete(layer)
       const active = document.activeElement
       const lost = !active || active === document.body || !active.isConnected || layer.contains(active)
-      if (back?.isConnected && lost) back.focus()
+      if (back?.isConnected && back !== document.body && lost) back.focus()
+      else if (active instanceof HTMLElement && layer.contains(active)) active.blur()
     }
     const observer = new MutationObserver((records) => {
       for (const r of records) {

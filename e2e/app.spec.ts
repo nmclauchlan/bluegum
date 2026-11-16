@@ -43,9 +43,8 @@ test('themes are grouped into dark and light, and can be picked from the View me
     await expect(menu.locator(':scope > .sep')).toHaveCount(1)
     await expect(menu.locator(':scope > [aria-checked="true"]')).toHaveText('Blue Gum Dark')
     await menu.locator(':scope > .item', { hasText: 'Tokyo Night' }).click()
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'tokyo-night')
-
     await page.keyboard.press('Control+Shift+P')
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'tokyo-night')
     const palette = page.getByRole('dialog', { name: 'Command palette' })
     await palette.getByRole('combobox').fill('theme latte')
     await expect(palette.getByRole('option').first()).toContainText('Theme: Catppuccin Latte')

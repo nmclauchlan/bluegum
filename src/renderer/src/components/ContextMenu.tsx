@@ -81,7 +81,9 @@ function MenuList({
     item.onClick?.()
   }
 
+  const present = useIsPresent()
   const onKeyDown = (e: React.KeyboardEvent): void => {
+    if (!present) return
     e.stopPropagation()
     const items = enabled()
     const at = items.indexOf(document.activeElement as HTMLElement)
@@ -241,7 +243,10 @@ function OpenMenu({ menu, onClose }: { menu: MenuState; onClose: () => void }): 
   useLayoutEffect(() => {
     if (present) return
     const now = document.activeElement
-    if (returnTo?.isConnected && (!now || now === document.body || !now.isConnected || now.closest('.context-menu-root, .context-menu-layer'))) returnTo.focus({ preventScroll: true })
+    if (!now || now === document.body || !now.isConnected || now.closest('.context-menu-root, .context-menu-layer')) {
+      if (returnTo?.isConnected && returnTo !== document.body) returnTo.focus({ preventScroll: true })
+      else if (now instanceof HTMLElement && now.closest('.context-menu-root, .context-menu-layer')) now.blur()
+    }
   }, [present, returnTo])
 
   useEffect(() => {
