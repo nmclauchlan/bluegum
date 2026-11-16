@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Icon } from './Icon'
+import { overlayOpen } from '../keynav'
 
 export type MenuEntry =
   | { label: string; shortcut?: string; onSelect: () => void; disabled?: boolean; checked?: boolean }
@@ -44,7 +45,7 @@ export function MenuBar({ menus }: { menus: MenuDef[] }): React.JSX.Element {
     let altAlone = false
     const down = (e: KeyboardEvent): void => {
       altAlone = e.key === 'Alt' && !e.ctrlKey && !e.shiftKey && !e.metaKey
-      if (e.defaultPrevented || document.querySelector('.overlay')) return
+      if (e.defaultPrevented || overlayOpen()) return
       if (e.key === 'F10' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault()
         if (ref.current?.contains(document.activeElement)) leave()
@@ -60,7 +61,7 @@ export function MenuBar({ menus }: { menus: MenuDef[] }): React.JSX.Element {
       if (e.key !== 'Alt' || !altAlone) return
       altAlone = false
       e.preventDefault()
-      if (document.querySelector('.overlay')) return
+      if (overlayOpen()) return
       if (ref.current?.contains(document.activeElement)) leave()
       else enter(0, null)
     }

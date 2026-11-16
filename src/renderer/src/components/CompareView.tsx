@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSlidingIndicator } from '../motion'
+import { OPEN_MENU, OPEN_OVERLAY } from '../keynav'
 import type { CompareCommit, CompareMode, CompareSummary, StatusFile } from '@shared/types'
 import { DiffView } from './DiffView'
 import { FileList, FileViewToggle } from './FileList'
@@ -99,7 +100,7 @@ export function CompareView({
 
   useEffect(() => {
     const key = (e: KeyboardEvent): void => {
-      if (e.key !== 'Escape' || document.querySelector('.overlay, .dialog, .context-menu-root')) return
+      if (e.key !== 'Escape' || document.querySelector(`${OPEN_OVERLAY}, ${OPEN_MENU}`)) return
       if (e.target instanceof HTMLElement && e.target.closest('input, textarea, select')) return
       onClose()
     }

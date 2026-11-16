@@ -9,6 +9,8 @@ import { Loading } from './Spinner'
 import { BuildMarker } from './BuildStatus'
 import type { MenuItem } from './ContextMenu'
 import { focusItem } from '../keynav'
+import { Icon } from './Icon'
+import { AnimatePresence, motion } from 'motion/react'
 
 const ROW_H = 28
 const FRESH_LIMIT = 20
@@ -353,6 +355,7 @@ export function CommitList({
       const start = Math.max(0, Math.floor(el.scrollTop / ROW_H) - OVERSCAN)
       const end = Math.min(total, Math.ceil((el.scrollTop + el.clientHeight) / ROW_H) + OVERSCAN)
       setRange((r) => (r.start === start && r.end === end ? r : { start, end }))
+      if (el.scrollTop < ROW_H) setUnseen((u) => (u.length ? [] : u))
     }
     const onScroll = (): void => {
       if (!frame) frame = requestAnimationFrame(update)
@@ -369,14 +372,31 @@ export function CommitList({
   }, [total])
 
   const known = useRef<Set<string> | null>(null)
+  const onScreen = useRef<Commit[]>([])
   const [fresh, setFresh] = useState(NONE)
+  const [unseen, setUnseen] = useState<string[]>([])
   useLayoutEffect(() => {
     const hashes = commits.filter((c) => c.hash !== WIP_HASH).map((c) => c.hash)
     const before = known.current
     known.current = new Set(hashes)
+    const el = container.current
+    const previous = onScreen.current
+    onScreen.current = commits
+    if (el && el.scrollTop > 0 && previous.length) {
+      const first = Math.floor(el.scrollTop / ROW_H)
+      const hash = previous[first]?.hash
+      const at = hash ? commits.findIndex((c) => c.hash === hash) : -1
+      if (at !== -1 && at !== first) el.scrollTop = at * ROW_H + (el.scrollTop - first * ROW_H)
+    }
     if (!before) return
     const added = hashes.filter((h) => !before.has(h))
-    if (added.length && added.length <= FRESH_LIMIT && added.length <= hashes.length / 2) setFresh(new Set(added))
+    if (!added.length || added.length > FRESH_LIMIT || added.length > hashes.length / 2) return
+    setFresh(new Set(added))
+    if (el && el.scrollTop >= ROW_H) {
+      const top = Math.floor(el.scrollTop / ROW_H)
+      const above = added.filter((h) => commits.findIndex((c) => c.hash === h) < top)
+      if (above.length) setUnseen((u) => [...u, ...above])
+    }
   }, [commits])
   useEffect(() => {
     if (!fresh.size) return
@@ -526,7 +546,7 @@ export function CommitList({
       nodes.push(
         <div
           key={'n' + c.hash}
-          className={`graph-node${i === headIndex ? ' head' : ''}`}
+          className={`graph-node${i === headIndex ? ' head' : ''}${fresh.has(c.hash) ? ' fresh' : ''}`}
           style={{
             left: cx(r.lane) - NODE / 2,
             top: cy(i) - NODE / 2,
@@ -572,6 +592,28 @@ export function CommitList({
         }}
       />
       {filterNote}
+      <div className="new-commits-anchor">
+        <AnimatePresence>
+          {unseen.length > 0 && (
+            <motion.button
+              key="new-commits"
+              className="new-commits"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => {
+                setFresh(new Set(unseen))
+                setUnseen([])
+                container.current?.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' })
+              }}
+            >
+              <Icon name="chevronUp" size={12} />
+              {unseen.length} new commit{unseen.length === 1 ? '' : 's'}
+            </motion.button>
+          )}
+        </AnimatePresence>
+      </div>
       <div
         className="commit-scroll"
         ref={container}
@@ -605,9 +647,12 @@ export function CommitList({
                   x1 === x2
                     ? `M${x1},${y1} L${x2},${y2}`
                     : `M${x1},${y1} C${x1},${y1 + ROW_H * 0.6} ${x2},${y2 - ROW_H * 0.6} ${x2},${y2}`
+                const arriving = !dashed && fresh.has(commits[e.fromRow]?.hash)
                 return (
                   <path
                     key={`${e.fromRow}-${e.fromLane}-${e.toRow}-${e.toLane}-${i}`}
+                    className={arriving ? 'fresh-edge' : undefined}
+                    pathLength={arriving ? 1 : undefined}
                     d={d}
                     stroke={color}
                     strokeWidth={2}
@@ -626,6 +671,7 @@ export function CommitList({
                 return (
                   <circle
                     key={i}
+                    className={fresh.has(commits[i].hash) ? 'fresh-node' : undefined}
                     cx={cx(r.lane)}
                     cy={cy(i)}
                     r={isWip ? (showAvatars ? 8 : 5) : isHead ? 6 : r.isMerge ? (showAvatars ? 5 : 4) : 5}

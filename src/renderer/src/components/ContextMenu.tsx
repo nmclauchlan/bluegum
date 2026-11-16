@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { AnimatePresence, motion, useIsPresent } from 'motion/react'
 import { Icon, type IconName } from './Icon'
 
 const LayerContext = createContext<HTMLElement | null>(null)
@@ -215,13 +216,19 @@ function Submenu({
   )
 }
 
-export function ContextMenu({ menu, onClose }: { menu: MenuState | null; onClose: () => void }): React.JSX.Element | null {
+export function ContextMenu({ menu, onClose }: { menu: MenuState | null; onClose: () => void }): React.JSX.Element {
+  return <AnimatePresence>{menu && <OpenMenu key={`${menu.x},${menu.y}`} menu={menu} onClose={onClose} />}</AnimatePresence>
+}
+
+function OpenMenu({ menu, onClose }: { menu: MenuState; onClose: () => void }): React.JSX.Element {
+  const present = useIsPresent()
   const ref = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState({ x: 0, y: 0, clip: '0 70% 70% 0' })
   const [layer, setLayer] = useState<HTMLDivElement | null>(null)
+  const [returnTo] = useState(() => document.activeElement as HTMLElement | null)
 
   useLayoutEffect(() => {
-    if (!menu || !ref.current) return
+    if (!ref.current) return
     const el = ref.current.firstElementChild as HTMLElement | null
     const rect = (el ?? ref.current).getBoundingClientRect()
     const x = Math.max(4, Math.min(menu.x, window.innerWidth - rect.width - 4))
@@ -232,16 +239,13 @@ export function ContextMenu({ menu, onClose }: { menu: MenuState | null; onClose
   }, [menu])
 
   useLayoutEffect(() => {
-    if (!menu) return
-    const returnTo = document.activeElement as HTMLElement | null
-    return () => {
-      const now = document.activeElement
-      if (returnTo?.isConnected && (!now || now === document.body || !now.isConnected || now.closest('.context-menu-root, .context-menu-layer'))) returnTo.focus({ preventScroll: true })
-    }
-  }, [menu])
+    if (present) return
+    const now = document.activeElement
+    if (returnTo?.isConnected && (!now || now === document.body || !now.isConnected || now.closest('.context-menu-root, .context-menu-layer'))) returnTo.focus({ preventScroll: true })
+  }, [present, returnTo])
 
   useEffect(() => {
-    if (!menu) return
+    if (!present) return
     const close = (): void => onClose()
     const key = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onClose()
@@ -254,17 +258,23 @@ export function ContextMenu({ menu, onClose }: { menu: MenuState | null; onClose
       window.removeEventListener('blur', close)
       window.removeEventListener('keydown', key)
     }
-  }, [menu, onClose])
+  }, [present, onClose])
 
-  if (!menu) return null
   return (
     <>
-      <div ref={ref} className="context-menu-root" style={{ left: pos.x, top: pos.y, '--menu-clip': pos.clip } as React.CSSProperties}>
+      <motion.div
+        ref={ref}
+        className="context-menu-root"
+        data-closing={present ? undefined : ''}
+        inert={!present}
+        style={{ left: pos.x, top: pos.y, '--menu-clip': pos.clip } as React.CSSProperties}
+        exit={{ opacity: 0, transition: { duration: 0.1 } }}
+      >
         <LayerContext.Provider value={layer}>
-          <MenuList key={`${menu.x},${menu.y}`} items={menu.items} onClose={onClose} autoFocus />
+          <MenuList items={menu.items} onClose={onClose} autoFocus />
         </LayerContext.Provider>
-      </div>
-      <div ref={setLayer} className="context-menu-layer" onMouseDown={(e) => e.stopPropagation()} />
+      </motion.div>
+      {present && <div ref={setLayer} className="context-menu-layer" onMouseDown={(e) => e.stopPropagation()} />}
     </>
   )
 }

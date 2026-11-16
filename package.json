@@ -80,6 +80,7 @@
     "@lezer/highlight": "^1.2.5",
     "codemirror": "^6.0.2",
     "electron-updater": "^6.8.9",
+    "motion": "^14.14.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "simple-git": "^4.0.2"

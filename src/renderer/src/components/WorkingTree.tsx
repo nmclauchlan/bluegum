@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { motion } from 'motion/react'
 import type { RepoStatus, StatusFile } from '@shared/types'
 import type { Actions } from '../actions'
 import type { MenuItem } from './ContextMenu'
@@ -6,12 +7,13 @@ import { FileList, FileViewToggle } from './FileList'
 import { canEdit, type FileViewRequest } from './FileViewer'
 import { copyToClipboard, errorMessage, revealInFolder, revealLabel } from '../util'
 import { Icon } from './Icon'
-import { focusItem, listKeys, useRovingFocus } from '../keynav'
+import { focusItem, listKeys, OPEN_MENU, OPEN_OVERLAY, useRovingFocus } from '../keynav'
 
 type Area = 'staged' | 'unstaged'
 type Move = 'stage' | 'unstage'
 
 const SUMMARY_LIMIT = 72
+const GLIDE_LIMIT = 150
 
 function siblingRow(row: HTMLElement, dir: 1 | -1): HTMLElement | undefined {
   for (let el = dir > 0 ? row.nextElementSibling : row.previousElementSibling; el; el = dir > 0 ? el.nextElementSibling : el.previousElementSibling) {
@@ -86,6 +88,12 @@ export function WorkingTree({
   const { staged: stagedFiles, unstaged: changedFiles } = useMemo(() => withPending(status, pending), [status, pending])
   const conflictFiles = changedFiles.filter((f) => conflicted.has(f.path))
   const unstagedFiles = changedFiles.filter((f) => !conflicted.has(f.path))
+  const glideId = useMemo(() => {
+    if (stagedFiles.length + changedFiles.length > GLIDE_LIMIT) return undefined
+    const unstaged = new Set(changedFiles.map((f) => f.path))
+    const inBoth = new Set(stagedFiles.filter((f) => unstaged.has(f.path)).map((f) => f.path))
+    return (f: StatusFile): string | undefined => (inBoth.has(f.path) ? undefined : `change:${f.path}`)
+  }, [stagedFiles, changedFiles])
 
   useEffect(() => {
     if (operation?.message && !message) setMessage(operation.message)
@@ -106,7 +114,7 @@ export function WorkingTree({
       if (e.key !== ' ' || e.ctrlKey || e.metaKey || e.altKey) return
       const t = e.target
       if (t instanceof HTMLElement && t.closest('input, textarea, select, button, [contenteditable="true"], .cm-editor')) return
-      if (document.querySelector('.overlay, .dialog, .context-menu-root') || conflicted.has(viewing.file.path)) return
+      if (document.querySelector(`${OPEN_OVERLAY}, ${OPEN_MENU}`) || conflicted.has(viewing.file.path)) return
       e.preventDefault()
       const list = staged ? stagedFiles : unstagedFiles
       const at = list.findIndex((f) => f.path === viewing.file.path)
@@ -365,7 +373,7 @@ export function WorkingTree({
           </button>
         </div>
       )}
-      <div className="panel-body" ref={filesNav} role="tree" aria-label="Uncommitted changes" onKeyDown={(e) => listKeys(e)}>
+      <motion.div className="panel-body" ref={filesNav} layoutScroll role="tree" aria-label="Uncommitted changes" onKeyDown={(e) => listKeys(e)}>
         {conflictFiles.length > 0 && (
           <>
             <div className="file-group-title conflicts">
@@ -405,6 +413,7 @@ export function WorkingTree({
             onDoubleClick={(f) => void stage([f.path])}
             onContextMenu={fileMenu('unstaged')}
             onKeyDown={rowKeys('unstaged')}
+          layoutIdFor={glideId}
             actions={(f) => (
               <span className="actions" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
                 {canEdit(f) && (
@@ -436,6 +445,7 @@ export function WorkingTree({
             onDoubleClick={(f) => void unstage([f.path])}
             onContextMenu={fileMenu('staged')}
             onKeyDown={rowKeys('staged')}
+          layoutIdFor={glideId}
             actions={(f) => (
               <span className="actions" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
                 {canEdit(f) && (
@@ -450,7 +460,7 @@ export function WorkingTree({
             )}
           />
         </div>
-      </div>
+      </motion.div>
       <div className="commit-form">
         <div className="commit-summary">
           <input

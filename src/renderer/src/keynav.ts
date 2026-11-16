@@ -1,6 +1,12 @@
 import { useEffect, useMemo } from 'react'
 
 const ITEM = '[data-nav]'
+export const OPEN_OVERLAY = '.overlay:not([data-closing])'
+export const OPEN_MENU = '.context-menu-root:not([data-closing])'
+
+export function overlayOpen(): boolean {
+  return !!document.querySelector(OPEN_OVERLAY)
+}
 const FOCUSABLE = 'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [href], [tabindex]:not([tabindex="-1"])'
 const OWN_KEYS = 'input, textarea, select, [contenteditable="true"], .cm-editor'
 
@@ -136,7 +142,7 @@ function cycleRegion(back: boolean): void {
 }
 
 function topLayer(): HTMLElement | null {
-  const layers = [...document.querySelectorAll<HTMLElement>('.overlay')].filter(visible)
+  const layers = [...document.querySelectorAll<HTMLElement>(OPEN_OVERLAY)].filter(visible)
   return layers[layers.length - 1] ?? null
 }
 
@@ -197,8 +203,20 @@ export function useKeyboardShell(): void {
 
     const layersIn = (node: Node): HTMLElement[] =>
       node instanceof HTMLElement ? (node.matches('.overlay') ? [node] : [...node.querySelectorAll<HTMLElement>('.overlay')]) : []
+    const release = (layer: HTMLElement): void => {
+      if (!returns.has(layer)) return
+      const back = returns.get(layer)
+      returns.delete(layer)
+      const active = document.activeElement
+      const lost = !active || active === document.body || !active.isConnected || layer.contains(active)
+      if (back?.isConnected && lost) back.focus()
+    }
     const observer = new MutationObserver((records) => {
       for (const r of records) {
+        if (r.type === 'attributes') {
+          if (r.target instanceof HTMLElement && r.target.matches('.overlay[data-closing]')) release(r.target)
+          continue
+        }
         for (const node of r.addedNodes) {
           for (const layer of layersIn(node)) {
             const focusedInside = layer.contains(document.activeElement)
@@ -206,17 +224,10 @@ export function useKeyboardShell(): void {
             if (!focusedInside) (layer.querySelector<HTMLElement>('[autofocus]') ?? focusables(layer)[0])?.focus()
           }
         }
-        for (const node of r.removedNodes) {
-          for (const layer of layersIn(node)) {
-            const back = returns.get(layer)
-            returns.delete(layer)
-            const lost = !document.activeElement || document.activeElement === document.body || !document.activeElement.isConnected
-            if (back?.isConnected && lost) back.focus()
-          }
-        }
+        for (const node of r.removedNodes) for (const layer of layersIn(node)) release(layer)
       }
     })
-    observer.observe(document.body, { childList: true, subtree: true })
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-closing'] })
     window.addEventListener('focusin', onFocusIn)
     window.addEventListener('keydown', onKey)
     return () => {

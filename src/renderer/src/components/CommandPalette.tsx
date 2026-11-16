@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Command } from '../commands'
 import { highlight, run, subsequence } from '../fuzzy'
+import { Overlay } from './Overlay'
 
 interface Match {
   command: Command
@@ -63,7 +64,7 @@ export function CommandPalette({ commands, onClose }: { commands: Command[]; onC
   }
 
   return (
-    <div className="overlay switcher-overlay" onMouseDown={onClose}>
+    <Overlay className="switcher-overlay" onDismiss={onClose}>
       <div className="dialog repo-switcher command-palette" role="dialog" aria-label="Command palette" onMouseDown={(e) => e.stopPropagation()}>
         <input
           className="repo-switcher-input"
@@ -103,6 +104,6 @@ export function CommandPalette({ commands, onClose }: { commands: Command[]; onC
         </div>
         <div className="repo-switcher-hint">↑ ↓ to choose · Enter to run · Esc to close</div>
       </div>
-    </div>
+    </Overlay>
   )
 }

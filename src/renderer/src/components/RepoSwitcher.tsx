@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { highlight, run, subsequence } from '../fuzzy'
+import { Overlay } from './Overlay'
 
 export interface SwitcherEntry {
   path: string
@@ -72,7 +73,7 @@ export function RepoSwitcher({
   }
 
   return (
-    <div className="overlay switcher-overlay" onMouseDown={onClose}>
+    <Overlay className="switcher-overlay" onDismiss={onClose}>
       <div className="dialog repo-switcher" role="dialog" aria-label="Go to repository" onMouseDown={(e) => e.stopPropagation()}>
         <input
           className="repo-switcher-input"
@@ -114,6 +115,6 @@ export function RepoSwitcher({
         </div>
         <div className="repo-switcher-hint">↑ ↓ to choose · Enter to open · Esc to close</div>
       </div>
-    </div>
+    </Overlay>
   )
 }

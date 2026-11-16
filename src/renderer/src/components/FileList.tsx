@@ -3,8 +3,10 @@ import type { StatusFile } from '@shared/types'
 import { setFileView, useFileView } from '../fileView'
 import { Icon } from './Icon'
 import { useSlidingIndicator } from '../motion'
+import { motion } from 'motion/react'
 
 const ARRIVE_MS = 900
+const GLIDE = { layout: { duration: 0.24, ease: [0.2, 0.8, 0.2, 1] as const } }
 const NONE: ReadonlySet<string> = new Set()
 
 export function FileRow({
@@ -17,11 +19,13 @@ export function FileRow({
   depth = 0,
   label,
   entering = false,
+  layoutId,
   children
 }: {
   file: StatusFile
   selected: boolean
   entering?: boolean
+  layoutId?: string
   onClick: (e: React.MouseEvent) => void
   onDoubleClick?: () => void
   onContextMenu?: (e: React.MouseEvent) => void
@@ -31,25 +35,32 @@ export function FileRow({
   children?: React.ReactNode
 }): React.JSX.Element {
   const full = file.oldPath ? `${file.oldPath} → ${file.path}` : file.path
-  return (
-    <div
-      className={`file-item${selected ? ' selected' : ''}${entering ? ' entering' : ''}`}
-      data-nav
-      data-path={file.path}
-      role="treeitem"
-      aria-level={depth + 1}
-      aria-selected={selected}
-      style={{ paddingLeft: 12 + depth * 14 }}
-      onClick={onClick}
-      onDoubleClick={onDoubleClick}
-      onContextMenu={onContextMenu}
-      onKeyDown={onKeyDown}
-      title={full}
-    >
+  const props = {
+    className: `file-item${selected ? ' selected' : ''}${entering ? ' entering' : ''}`,
+    'data-nav': true,
+    'data-path': file.path,
+    role: 'treeitem',
+    'aria-level': depth + 1,
+    'aria-selected': selected,
+    style: { paddingLeft: 12 + depth * 14 },
+    onClick,
+    onDoubleClick,
+    onContextMenu,
+    onKeyDown,
+    title: full
+  }
+  const content = (
+    <>
       <span className={`status-letter ${file.status}`}>{file.status}</span>
       <span className="path"><span>{label ?? full}</span></span>
       {children}
-    </div>
+    </>
+  )
+  if (!layoutId) return <div {...props}>{content}</div>
+  return (
+    <motion.div {...props} layoutId={layoutId} layout="position" transition={GLIDE}>
+      {content}
+    </motion.div>
   )
 }
 
@@ -125,7 +136,8 @@ export function FileList({
   onContextMenu,
   onKeyDown,
   actions,
-  resetKey
+  resetKey,
+  layoutIdFor
 }: {
   files: StatusFile[]
   selectedPath: string | null
@@ -135,6 +147,7 @@ export function FileList({
   onKeyDown?: (e: React.KeyboardEvent, f: StatusFile) => void
   actions?: (f: StatusFile) => React.ReactNode
   resetKey?: string
+  layoutIdFor?: (f: StatusFile) => string | undefined
 }): React.JSX.Element {
   const view = useFileView()
   const known = useRef<{ key?: string; paths: Set<string> } | null>(null)
@@ -178,6 +191,7 @@ export function FileList({
             file={f}
             selected={selectedPath === f.path}
             entering={entering(f.path)}
+            layoutId={layoutIdFor?.(f)}
             onClick={(e) => e.detail < 2 && onSelect(f)}
             onDoubleClick={onDoubleClick ? () => onDoubleClick(f) : undefined}
             onContextMenu={onContextMenu ? (e) => onContextMenu(e, [f], null) : undefined}
@@ -228,6 +242,7 @@ export function FileList({
           label={f.oldPath ? `${f.oldPath.slice(f.oldPath.lastIndexOf('/') + 1)} → ${name}` : name}
           selected={selectedPath === f.path}
           entering={entering(f.path)}
+          layoutId={layoutIdFor?.(f)}
           onClick={(e) => e.detail < 2 && onSelect(f)}
           onDoubleClick={onDoubleClick ? () => onDoubleClick(f) : undefined}
           onContextMenu={onContextMenu ? (e) => onContextMenu(e, [f], null) : undefined}

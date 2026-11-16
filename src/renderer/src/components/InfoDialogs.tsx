@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react'
+import { useIsPresent } from 'motion/react'
 import { BrandIcon } from './BrandIcon'
+import { Overlay } from './Overlay'
 
 function useEscape(onClose: () => void): void {
+  const present = useIsPresent()
   useEffect(() => {
+    if (!present) return
     const key = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)
-  }, [onClose])
+  }, [onClose, present])
 }
 
 export function AboutDialog({ onClose }: { onClose: () => void }): React.JSX.Element {
@@ -18,7 +22,7 @@ export function AboutDialog({ onClose }: { onClose: () => void }): React.JSX.Ele
   }, [])
   useEscape(onClose)
   return (
-    <div className="overlay" onMouseDown={onClose}>
+    <Overlay onDismiss={onClose}>
       <div className="dialog about-dialog" role="dialog" aria-label="About Blue Gum" onMouseDown={(e) => e.stopPropagation()}>
         <div className="about-brand">
           <BrandIcon size={64} />
@@ -41,7 +45,7 @@ export function AboutDialog({ onClose }: { onClose: () => void }): React.JSX.Ele
           <button className="primary" onClick={onClose}>Close</button>
         </div>
       </div>
-    </div>
+    </Overlay>
   )
 }
 
@@ -103,7 +107,7 @@ export function ShortcutsDialog({ onClose }: { onClose: () => void }): React.JSX
   useEscape(onClose)
   const mac = window.native?.platform === 'darwin'
   return (
-    <div className="overlay" onMouseDown={onClose}>
+    <Overlay onDismiss={onClose}>
       <div className="dialog shortcuts-dialog" role="dialog" aria-label="Keyboard shortcuts" onMouseDown={(e) => e.stopPropagation()}>
         <h3>Keyboard shortcuts</h3>
         <div className="shortcuts-scroll" tabIndex={0}>
@@ -127,6 +131,6 @@ export function ShortcutsDialog({ onClose }: { onClose: () => void }): React.JSX
           <button className="primary" onClick={onClose}>Close</button>
         </div>
       </div>
-    </div>
+    </Overlay>
   )
 }

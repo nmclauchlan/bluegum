@@ -22,7 +22,8 @@ import { collectCommands, type Command } from './commands'
 import { CommandPalette } from './components/CommandPalette'
 import { Icon } from './components/Icon'
 import { Toast, type ToastState } from './components/Toast'
-import { useKeyboardShell } from './keynav'
+import { overlayOpen, useKeyboardShell } from './keynav'
+import { AnimatePresence, MotionConfig } from 'motion/react'
 import { syncSettingsFromMain, useSettings } from './settings'
 import { BellIcon, failedBuildKey, NotificationsPanel, type FailedBuild, type RepoIncoming } from './components/Notifications'
 import {
@@ -413,10 +414,10 @@ export default function App(): React.JSX.Element {
       } else if (e.key === 't' && !e.shiftKey) {
         e.preventDefault()
         setHome(true)
-      } else if (e.key.toLowerCase() === 'p' && e.shiftKey && !e.altKey && !document.querySelector('.overlay')) {
+      } else if (e.key.toLowerCase() === 'p' && e.shiftKey && !e.altKey && !overlayOpen()) {
         e.preventDefault()
         setPaletteOpen(true)
-      } else if (e.key === 'p' && !e.shiftKey && !e.altKey && !document.querySelector('.overlay')) {
+      } else if (e.key === 'p' && !e.shiftKey && !e.altKey && !overlayOpen()) {
         e.preventDefault()
         setSwitcherOpen(true)
       } else if (e.key === '=' || e.key === '+') {
@@ -778,184 +779,188 @@ export default function App(): React.JSX.Element {
   }
 
   return (
-    <div className="app">
-      <div className="menubar-row">
-        <div className="brand-lockup" title="Blue Gum">
-          <BrandIcon size={18} />
-          <strong>Blue Gum</strong>
-        </div>
-        <MenuBar menus={menus} />
-        <div className="menubar-drag" />
-      </div>
-      <div className="titlebar">
-        <button
-          className={`tab home-tab${home || !tabs.length ? ' active' : ''}`}
-          title={`Repository Management (${mod}T)`}
-          aria-label="Repository Management"
-          aria-pressed={home || !tabs.length}
-          onClick={() => setHome((h) => (tabs.length ? !h : true))}
-        >
-          <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round">
-            <path d="M1.5 4.5v-1h4.2l1.3 1.5h7.5v8h-13Z" />
-          </svg>
-        </button>
-        <button
-          className="tab switcher-tab"
-          title={`Go to repository (${mod}P)`}
-          aria-label="Go to repository"
-          onClick={() => setSwitcherOpen(true)}
-        >
-          <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-            <circle cx="7" cy="7" r="4.5" />
-            <path d="m10.4 10.4 3.6 3.6" />
-          </svg>
-        </button>
-        <TabBar
-          tabs={tabs}
-          groups={groups}
-          activePath={home ? null : activePath}
-          shell={shell}
-          onSelect={selectTab}
-          onClose={closeTab}
-          onCloseMany={closeMany}
-          onMove={(path, target, after) => setTabs((list) => moveTab(list, path, target, after))}
-          onMoveToEnd={(path) => setTabs((list) => moveToEnd(list, path))}
-          onAssignGroup={(path, group) => setTabs((list) => assignGroup(list, path, group))}
-          onCreateGroup={createGroup}
-          onUpdateGroup={updateGroup}
-          onUngroup={ungroup}
-          onPullGroup={(id) => void pullGroup(id)}
-          groupProgress={groupProgress}
-          onOpenInto={openInto}
-          onClone={cloneRepo}
-          onNewGroup={newGroup}
-          onMoveGroupToTab={(id, target, after) => setTabs((list) => moveGroupToTab(list, id, target, after))}
-          onMoveGroupToGroup={(id, target, after) => {
-            setTabs((list) => moveGroupToGroup(list, id, target, after))
-            setGroups((gs) => reorderGroups(gs, id, target, after))
-          }}
-          onMoveGroupToEnd={(id) => {
-            setTabs((list) => moveGroupToEnd(list, id))
-            setGroups((gs) => {
-              const g = gs.find((x) => x.id === id)
-              return g ? [...gs.filter((x) => x.id !== id), g] : gs
-            })
-          }}
-        />
-        <div className="titlebar-spacer" />
-        <button ref={themeButton} className="icon titlebar-btn" title={`Theme: ${theme.name}`} aria-label={`Theme: ${theme.name}`} onClick={themeMenu}>
-          <Icon name="theme" size={14} />
-          {theme.name}
-        </button>
-        <button
-          className={`icon titlebar-btn notifications-btn${unseenCount ? ' has-unseen' : ''}`}
-          title={unseenCount ? `${unseenCount} incoming commit${unseenCount === 1 ? '' : 's'}` : 'Incoming commits'}
-          aria-label={unseenCount ? `Notifications, ${unseenCount} new` : 'Notifications'}
-          aria-expanded={!!notifOpen}
-          onClick={openNotifications}
-        >
-          <span key={bellRings} className={bellRings ? 'bell ringing' : 'bell'}>
-            <BellIcon />
-          </span>
-          {unseenCount > 0 && <span key={unseenCount} className="notif-badge">{unseenCount > 99 ? '99+' : unseenCount}</span>}
-        </button>
-        <button className="icon titlebar-btn" title="Settings (Ctrl+,)" aria-label="Settings" onClick={() => setSettingsOpen({})}>
-          <Icon name="settings" />
-        </button>
-      </div>
-      {tabs.length === 0 && recent.length === 0 && favorites.length === 0 ? (
-        <>
-          <Welcome recent={recent} onOpen={shell.openRepo} onClone={() => setCloneOpen({})} onOpenRecent={openPath} />
-          <div className="statusbar">
-            <span className="spacer" />
-            <UpdateNotice />
-            <AppVersion />
+    <MotionConfig reducedMotion="user">
+      <div className="app">
+        <div className="menubar-row">
+          <div className="brand-lockup" title="Blue Gum">
+            <BrandIcon size={18} />
+            <strong>Blue Gum</strong>
           </div>
-        </>
-      ) : (
-        (home || tabs.length === 0) && (
-          <RepoManager
-            open={tabs.map((t) => ({ path: t.path, name: t.name }))}
-            favorites={favorites}
-            recent={recent}
-            activePath={activePath}
-            groupNames={Object.fromEntries(tabs.filter((t) => t.group).map((t) => [t.path, groups.find((g) => g.id === t.group)?.name ?? '']))}
-            onOpen={(paths) => void openFromHome(paths)}
-            onBrowse={shell.openRepo}
-            onClone={() => setCloneOpen({})}
-            onInit={() => void initRepo()}
-            onClose={closeMany}
-            onRemoveRecent={(paths) => void Promise.all(paths.map((p) => window.git.removeRecent(p))).then(loadRecent)}
-            onClearRecent={() => void window.git.clearRecent().then(loadRecent)}
-            onToggleFavorite={toggleFavorite}
-            onReveal={(p) => revealInFolder(p, null)}
-            onFetch={(paths) => fetchRepos(paths, paths.length === tabs.length ? 'open' : 'bulk')}
-            onPull={(paths) => pullFromHome(paths, paths.length === tabs.length ? 'open' : 'bulk')}
-            busy={homeBusy}
-            refreshKey={homeRefresh}
+          <MenuBar menus={menus} />
+          <div className="menubar-drag" />
+        </div>
+        <div className="titlebar">
+          <button
+            className={`tab home-tab${home || !tabs.length ? ' active' : ''}`}
+            title={`Repository Management (${mod}T)`}
+            aria-label="Repository Management"
+            aria-pressed={home || !tabs.length}
+            onClick={() => setHome((h) => (tabs.length ? !h : true))}
+          >
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round">
+              <path d="M1.5 4.5v-1h4.2l1.3 1.5h7.5v8h-13Z" />
+            </svg>
+          </button>
+          <button
+            className="tab switcher-tab"
+            title={`Go to repository (${mod}P)`}
+            aria-label="Go to repository"
+            onClick={() => setSwitcherOpen(true)}
+          >
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <circle cx="7" cy="7" r="4.5" />
+              <path d="m10.4 10.4 3.6 3.6" />
+            </svg>
+          </button>
+          <TabBar
+            tabs={tabs}
+            groups={groups}
+            activePath={home ? null : activePath}
+            shell={shell}
+            onSelect={selectTab}
+            onClose={closeTab}
+            onCloseMany={closeMany}
+            onMove={(path, target, after) => setTabs((list) => moveTab(list, path, target, after))}
+            onMoveToEnd={(path) => setTabs((list) => moveToEnd(list, path))}
+            onAssignGroup={(path, group) => setTabs((list) => assignGroup(list, path, group))}
+            onCreateGroup={createGroup}
+            onUpdateGroup={updateGroup}
+            onUngroup={ungroup}
+            onPullGroup={(id) => void pullGroup(id)}
+            groupProgress={groupProgress}
+            onOpenInto={openInto}
+            onClone={cloneRepo}
+            onNewGroup={newGroup}
+            onMoveGroupToTab={(id, target, after) => setTabs((list) => moveGroupToTab(list, id, target, after))}
+            onMoveGroupToGroup={(id, target, after) => {
+              setTabs((list) => moveGroupToGroup(list, id, target, after))
+              setGroups((gs) => reorderGroups(gs, id, target, after))
+            }}
+            onMoveGroupToEnd={(id) => {
+              setTabs((list) => moveGroupToEnd(list, id))
+              setGroups((gs) => {
+                const g = gs.find((x) => x.id === id)
+                return g ? [...gs.filter((x) => x.id !== id), g] : gs
+              })
+            }}
           />
-        )
-      )}
-      {tabs.map((t) => (
-        <RepoView
-          key={t.path}
-          repo={t}
-          active={!home && t.path === activePath}
-          shell={shell}
-          onClose={() => closeTab(t.path)}
-          focus={focus && focus.path === t.path ? focus : null}
-          backgroundFetching={fetchingPaths.has(t.path)}
-        />
-      ))}
-      {infoDialog === 'about' && <AboutDialog onClose={() => setInfoDialog(null)} />}
-      {infoDialog === 'shortcuts' && <ShortcutsDialog onClose={() => setInfoDialog(null)} />}
-      {switcherOpen && <RepoSwitcher entries={switcherEntries()} onPick={pickRepo} onClose={() => setSwitcherOpen(false)} />}
-      {paletteOpen && <CommandPalette commands={paletteCommands()} onClose={() => setPaletteOpen(false)} />}
-      {notifOpen && (
-        <NotificationsPanel
-          repos={incomingList}
-          unseenKeys={notifOpen}
-          checking={checking}
-          lastChecked={lastChecked}
-          pulling={pullingRepo}
-          cleared={Object.keys(clearUndo.baselines).length + clearUndo.builds.length}
-          onOpenCommit={(path, hash) => {
-            closeNotifications()
-            setActivePath(path)
-            setHome(false)
-            setFocus((f) => ({ path, hash, n: (f?.n ?? 0) + 1 }))
-          }}
-          onPull={(path) => void pullIncoming(path)}
-          onCheckNow={() => void checkIncoming(true)}
-          onClear={(path, branch) => clearIncoming(path, branch)}
-          onClearAll={() => {
-            clearIncoming(null, null)
-            clearBuilds(incomingList.flatMap((r) => r.failedBuilds.map((f) => failedBuildKey(r.path, f))))
-          }}
-          onClearBuild={(key) => clearBuilds([key])}
-          onUndo={undoClear}
-          onClose={closeNotifications}
-        />
-      )}
-      <ContextMenu menu={menu} onClose={closeMenu} />
-      {cloneOpen && (
-        <CloneDialog
-          onClose={() => setCloneOpen(false)}
-          onOpenSettings={() => {
-            setCloneOpen(false)
-            setSettingsOpen({})
-          }}
-          onCloned={async (dest) => {
-            const group = cloneOpen.group
-            setCloneOpen(false)
-            await openPath(dest, true, group)
-            showInfo(`Cloned into ${dest}`)
-          }}
-        />
-      )}
-      {settingsOpen && <SettingsDialog suggestBaseUrl={settingsOpen.suggestBaseUrl} onClose={() => setSettingsOpen(false)} />}
-      {dialogs.element}
-      {toast && <Toast key={toast.id} toast={toast} onClose={closeToast} />}
-    </div>
+          <div className="titlebar-spacer" />
+          <button ref={themeButton} className="icon titlebar-btn" title={`Theme: ${theme.name}`} aria-label={`Theme: ${theme.name}`} onClick={themeMenu}>
+            <Icon name="theme" size={14} />
+            {theme.name}
+          </button>
+          <button
+            className={`icon titlebar-btn notifications-btn${unseenCount ? ' has-unseen' : ''}`}
+            title={unseenCount ? `${unseenCount} incoming commit${unseenCount === 1 ? '' : 's'}` : 'Incoming commits'}
+            aria-label={unseenCount ? `Notifications, ${unseenCount} new` : 'Notifications'}
+            aria-expanded={!!notifOpen}
+            onClick={openNotifications}
+          >
+            <span key={bellRings} className={bellRings ? 'bell ringing' : 'bell'}>
+              <BellIcon />
+            </span>
+            {unseenCount > 0 && <span key={unseenCount} className="notif-badge">{unseenCount > 99 ? '99+' : unseenCount}</span>}
+          </button>
+          <button className="icon titlebar-btn" title="Settings (Ctrl+,)" aria-label="Settings" onClick={() => setSettingsOpen({})}>
+            <Icon name="settings" />
+          </button>
+        </div>
+        {tabs.length === 0 && recent.length === 0 && favorites.length === 0 ? (
+          <>
+            <Welcome recent={recent} onOpen={shell.openRepo} onClone={() => setCloneOpen({})} onOpenRecent={openPath} />
+            <div className="statusbar">
+              <span className="spacer" />
+              <UpdateNotice />
+              <AppVersion />
+            </div>
+          </>
+        ) : (
+          (home || tabs.length === 0) && (
+            <RepoManager
+              open={tabs.map((t) => ({ path: t.path, name: t.name }))}
+              favorites={favorites}
+              recent={recent}
+              activePath={activePath}
+              groupNames={Object.fromEntries(tabs.filter((t) => t.group).map((t) => [t.path, groups.find((g) => g.id === t.group)?.name ?? '']))}
+              onOpen={(paths) => void openFromHome(paths)}
+              onBrowse={shell.openRepo}
+              onClone={() => setCloneOpen({})}
+              onInit={() => void initRepo()}
+              onClose={closeMany}
+              onRemoveRecent={(paths) => void Promise.all(paths.map((p) => window.git.removeRecent(p))).then(loadRecent)}
+              onClearRecent={() => void window.git.clearRecent().then(loadRecent)}
+              onToggleFavorite={toggleFavorite}
+              onReveal={(p) => revealInFolder(p, null)}
+              onFetch={(paths) => fetchRepos(paths, paths.length === tabs.length ? 'open' : 'bulk')}
+              onPull={(paths) => pullFromHome(paths, paths.length === tabs.length ? 'open' : 'bulk')}
+              busy={homeBusy}
+              refreshKey={homeRefresh}
+            />
+          )
+        )}
+        {tabs.map((t) => (
+          <RepoView
+            key={t.path}
+            repo={t}
+            active={!home && t.path === activePath}
+            shell={shell}
+            onClose={() => closeTab(t.path)}
+            focus={focus && focus.path === t.path ? focus : null}
+            backgroundFetching={fetchingPaths.has(t.path)}
+          />
+        ))}
+        <AnimatePresence>
+          {infoDialog === 'about' && <AboutDialog key="about" onClose={() => setInfoDialog(null)} />}
+          {infoDialog === 'shortcuts' && <ShortcutsDialog key="shortcuts" onClose={() => setInfoDialog(null)} />}
+          {switcherOpen && <RepoSwitcher key="switcher" entries={switcherEntries()} onPick={pickRepo} onClose={() => setSwitcherOpen(false)} />}
+          {paletteOpen && <CommandPalette key="palette" commands={paletteCommands()} onClose={() => setPaletteOpen(false)} />}
+        </AnimatePresence>
+        {notifOpen && (
+          <NotificationsPanel
+            repos={incomingList}
+            unseenKeys={notifOpen}
+            checking={checking}
+            lastChecked={lastChecked}
+            pulling={pullingRepo}
+            cleared={Object.keys(clearUndo.baselines).length + clearUndo.builds.length}
+            onOpenCommit={(path, hash) => {
+              closeNotifications()
+              setActivePath(path)
+              setHome(false)
+              setFocus((f) => ({ path, hash, n: (f?.n ?? 0) + 1 }))
+            }}
+            onPull={(path) => void pullIncoming(path)}
+            onCheckNow={() => void checkIncoming(true)}
+            onClear={(path, branch) => clearIncoming(path, branch)}
+            onClearAll={() => {
+              clearIncoming(null, null)
+              clearBuilds(incomingList.flatMap((r) => r.failedBuilds.map((f) => failedBuildKey(r.path, f))))
+            }}
+            onClearBuild={(key) => clearBuilds([key])}
+            onUndo={undoClear}
+            onClose={closeNotifications}
+          />
+        )}
+        <ContextMenu menu={menu} onClose={closeMenu} />
+        {cloneOpen && (
+          <CloneDialog
+            onClose={() => setCloneOpen(false)}
+            onOpenSettings={() => {
+              setCloneOpen(false)
+              setSettingsOpen({})
+            }}
+            onCloned={async (dest) => {
+              const group = cloneOpen.group
+              setCloneOpen(false)
+              await openPath(dest, true, group)
+              showInfo(`Cloned into ${dest}`)
+            }}
+          />
+        )}
+        {settingsOpen && <SettingsDialog suggestBaseUrl={settingsOpen.suggestBaseUrl} onClose={() => setSettingsOpen(false)} />}
+        {dialogs.element}
+        {toast && <Toast key={toast.id} toast={toast} onClose={closeToast} />}
+      </div>
+    </MotionConfig>
   )
 }

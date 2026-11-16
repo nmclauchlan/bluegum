@@ -22,6 +22,7 @@ import { fitPanels, setLayout, setPanelCollapsed, useCollapsedPanels, useLayout,
 import { copyToClipboard, errorMessage, prNoun, reducedMotion, shortHash, WIP_HASH } from './util'
 import { currentSettings, useSettings } from './settings'
 import { useCommands, type Command } from './commands'
+import { OPEN_MENU, OPEN_OVERLAY, overlayOpen } from './keynav'
 
 
 const PAGE_ROWS = 15
@@ -329,7 +330,7 @@ export function RepoView({
       if (!(e.ctrlKey || e.metaKey) || e.altKey) return
       const t = e.target
       if (t instanceof HTMLElement && t.closest('input, textarea, select, [contenteditable="true"], .cm-editor')) return
-      if (document.querySelector('.overlay, .dialog')) return
+      if (overlayOpen()) return
       const k = e.key.toLowerCase()
       if (k === 'f' && !e.shiftKey) {
         e.preventDefault()
@@ -393,7 +394,7 @@ export function RepoView({
       if (!step && e.key !== 'Home' && e.key !== 'End') return
       const t = e.target
       if (t instanceof HTMLElement && t.closest('input, textarea, select, [contenteditable="true"], .cm-editor, [data-nav], [role="menubar"], .splitter')) return
-      if (document.querySelector('.overlay, .dialog, .context-menu-root, .menubar-dropdown')) return
+      if (document.querySelector(`${OPEN_OVERLAY}, ${OPEN_MENU}, .menubar-dropdown`)) return
       const list = rowsRef.current
       if (!list.length) return
       e.preventDefault()
