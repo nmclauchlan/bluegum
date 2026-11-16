@@ -15,6 +15,7 @@ import { AnimatePresence, motion } from 'motion/react'
 const ROW_H = 28
 const FRESH_LIMIT = 20
 const SMOOTH_SCREENS = 3
+const centred = (el: HTMLElement, row: number): number => Math.max(0, row * ROW_H - el.clientHeight / 2 + ROW_H / 2)
 const NONE: ReadonlySet<string> = new Set()
 const MAX_LANES = 14
 const OVERSCAN = 12
@@ -346,6 +347,12 @@ export function CommitList({
   const graphCol = cols.colGraph || Math.max(Math.min(lanes, AUTO_LANES) * laneW + 10, 60)
   const total = commits.length
 
+  const glide = useRef<{ hash: string | null; top: number } | null>(null)
+  const glideTo = (el: HTMLElement, hash: string | null, top: number): void => {
+    glide.current = { hash, top: Math.max(0, Math.min(top, el.scrollHeight - el.clientHeight)) }
+    el.scrollTo({ top, behavior: 'smooth' })
+  }
+
   useLayoutEffect(() => {
     const el = container.current
     if (!el) return
@@ -356,16 +363,24 @@ export function CommitList({
       const end = Math.min(total, Math.ceil((el.scrollTop + el.clientHeight) / ROW_H) + OVERSCAN)
       setRange((r) => (r.start === start && r.end === end ? r : { start, end }))
       if (el.scrollTop < ROW_H) setUnseen((u) => (u.length ? [] : u))
+      if (glide.current && Math.abs(el.scrollTop - glide.current.top) < 1) glide.current = null
     }
     const onScroll = (): void => {
       if (!frame) frame = requestAnimationFrame(update)
     }
+    const interrupt = (): void => {
+      glide.current = null
+    }
     update()
     el.addEventListener('scroll', onScroll, { passive: true })
+    el.addEventListener('wheel', interrupt, { passive: true })
+    el.addEventListener('pointerdown', interrupt)
     const ro = new ResizeObserver(update)
     ro.observe(el)
     return () => {
       el.removeEventListener('scroll', onScroll)
+      el.removeEventListener('wheel', interrupt)
+      el.removeEventListener('pointerdown', interrupt)
       ro.disconnect()
       if (frame) cancelAnimationFrame(frame)
     }
@@ -382,7 +397,12 @@ export function CommitList({
     const el = container.current
     const previous = onScreen.current
     onScreen.current = commits
-    if (el && el.scrollTop > 0 && previous.length) {
+    const gliding = glide.current
+    if (el && gliding) {
+      const at = gliding.hash ? commits.findIndex((c) => c.hash === gliding.hash) : 0
+      if (at === -1) glide.current = null
+      else if (gliding.hash && centred(el, at) !== gliding.top) glideTo(el, gliding.hash, centred(el, at))
+    } else if (el && el.scrollTop > 0 && previous.length) {
       const first = Math.floor(el.scrollTop / ROW_H)
       const hash = previous[first]?.hash
       const at = hash ? commits.findIndex((c) => c.hash === hash) : -1
@@ -419,15 +439,20 @@ export function CommitList({
     const el = container.current
     const top = idx * ROW_H
     if (scrollTarget.nearest) {
+      glide.current = null
       if (top < el.scrollTop) el.scrollTop = top
       else if (top + ROW_H > el.scrollTop + el.clientHeight) el.scrollTop = top + ROW_H - el.clientHeight
       return
     }
-    const target = Math.max(0, top - el.clientHeight / 2 + ROW_H / 2)
+    const target = centred(el, idx)
     const jump = lastJump.current !== scrollTarget.n
     lastJump.current = scrollTarget.n
     const near = Math.abs(target - el.scrollTop) <= el.clientHeight * SMOOTH_SCREENS
-    el.scrollTo({ top: target, behavior: jump && near && !reducedMotion() ? 'smooth' : 'auto' })
+    if (jump && near && !reducedMotion()) glideTo(el, scrollTarget.hash, target)
+    else {
+      glide.current = null
+      el.scrollTo({ top: target, behavior: 'auto' })
+    }
     if (jump) setLanded(scrollTarget.hash)
   }, [scrollTarget, commits])
 
@@ -605,7 +630,10 @@ export function CommitList({
               onClick={() => {
                 setFresh(new Set(unseen))
                 setUnseen([])
-                container.current?.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' })
+                const el = container.current
+                if (!el) return
+                if (reducedMotion()) el.scrollTo({ top: 0, behavior: 'auto' })
+                else glideTo(el, null, 0)
               }}
             >
               <Icon name="chevronUp" size={12} />
