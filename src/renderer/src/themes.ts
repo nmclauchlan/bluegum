@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { reducedMotion } from './util'
 
 export interface Theme {
   id: string
@@ -217,6 +218,32 @@ export function applyTheme(theme: Theme): void {
   window.native?.setTitleBar(theme.vars.bg, theme.vars.fg)
 }
 
+let pointer = { x: 0, y: 0, at: -Infinity }
+window.addEventListener('pointerdown', (e) => (pointer = { x: e.clientX, y: e.clientY, at: performance.now() }), true)
+const POINTER_FRESH_MS = 2000
+let switching = 0
+
+function reveal(update: () => void): void {
+  if (!document.startViewTransition || reducedMotion()) return update()
+  const fromPointer = performance.now() - pointer.at < POINTER_FRESH_MS
+  const x = fromPointer ? pointer.x : innerWidth / 2
+  const y = fromPointer ? pointer.y : innerHeight / 2
+  const radius = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y))
+  const root = document.documentElement
+  const n = ++switching
+  root.classList.add('theme-switching')
+  const transition = document.startViewTransition(update)
+  transition.ready
+    .then(() =>
+      root.animate(
+        { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
+        { duration: 560, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', pseudoElement: '::view-transition-new(root)' }
+      )
+    )
+    .catch(() => {})
+  transition.finished.finally(() => n === switching && root.classList.remove('theme-switching'))
+}
+
 export function setTheme(id: string): void {
   const theme = THEMES.find((t) => t.id === id)
   if (!theme || theme === current) return
@@ -226,7 +253,7 @@ export function setTheme(id: string): void {
   } catch {
     /* storage unavailable */
   }
-  applyTheme(theme)
+  reveal(() => applyTheme(theme))
   listeners.forEach((l) => l())
 }
 

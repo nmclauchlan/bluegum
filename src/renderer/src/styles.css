@@ -1166,6 +1166,10 @@ button[aria-busy='true']::before { margin-right: 6px; vertical-align: -1px; }
 
 .commit-row, .file-item, .dir-item, .sidebar .ref-item, .repo-row, .group-row, .clone-row, .file-history-item { transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease; }
 
+html.theme-switching::view-transition { pointer-events: none; }
+html.theme-switching::view-transition-old(root),
+html.theme-switching::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+
 @keyframes menu-reveal {
   from { opacity: 0; clip-path: inset(var(--menu-clip, 0 70% 70% 0) round 6px); }
   to { opacity: 1; clip-path: inset(-32px round 6px); }

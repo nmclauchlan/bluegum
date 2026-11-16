@@ -96,3 +96,39 @@ test('commits that arrive while scrolled down keep the view still and show a pil
     await close()
   }
 })
+
+test('a new theme spreads out from where it was picked, and appears instantly with reduced motion', async () => {
+  const repo = initRepo(tempDir())
+  commit(repo, 'a.txt', 'a\n', 'Initial')
+  const { page, close } = await launch(repo)
+  try {
+    await page.evaluate(() => {
+      const w = window as unknown as { reveals: number }
+      const start = document.startViewTransition.bind(document)
+      w.reveals = 0
+      document.startViewTransition = ((update: () => void) => {
+        w.reveals++
+        return start(update)
+      }) as typeof document.startViewTransition
+    })
+    const html = page.locator('html')
+    const reveals = (): Promise<number> => page.evaluate(() => (window as unknown as { reveals: number }).reveals)
+    const pick = async (name: string): Promise<void> => {
+      await page.getByRole('menuitem', { name: 'View' }).click()
+      await page.locator('.menubar-entry', { hasText: 'Theme…' }).click()
+      await page.locator('.context-menu-root:not([data-closing]) > .context-menu > .item', { hasText: name }).click()
+    }
+
+    await pick('Dracula')
+    await expect(html).toHaveAttribute('data-theme', 'dracula')
+    await expect(html).not.toHaveClass(/theme-switching/)
+    expect(await reveals()).toBe(1)
+
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await pick('Nord')
+    await expect(html).toHaveAttribute('data-theme', 'nord')
+    expect(await reveals()).toBe(1)
+  } finally {
+    await close()
+  }
+})
