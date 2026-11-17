@@ -4,6 +4,7 @@ import { setFileView, useFileView } from '../fileView'
 import { Icon } from './Icon'
 import { useSlidingIndicator } from '../motion'
 import { motion } from 'motion/react'
+import { useCollapsedFolders } from '../repoPrefs'
 
 const ARRIVE_MS = 900
 const GLIDE = { layout: { duration: 0.24, ease: [0.2, 0.8, 0.2, 1] as const } }
@@ -166,21 +167,12 @@ export function FileList({
     const t = setTimeout(() => setArrived(NONE), ARRIVE_MS)
     return () => clearTimeout(t)
   }, [arrived])
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const [collapsed, toggle] = useCollapsedFolders()
   const tree = useMemo(() => {
     if (view !== 'tree') return null
     const root = buildTree(files)
     return { ...root, dirs: new Map([...root.dirs].map(([k, v]) => [k, compact(v)])) }
   }, [files, view])
-
-  const toggle = (path: string): void => {
-    setCollapsed((s) => {
-      const next = new Set(s)
-      if (next.has(path)) next.delete(path)
-      else next.add(path)
-      return next
-    })
-  }
 
   if (view === 'flat' || !tree) {
     return (

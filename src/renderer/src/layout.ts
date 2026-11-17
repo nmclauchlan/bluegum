@@ -145,6 +145,10 @@ export const setColumnHidden = (col: string, hide: boolean): void => hiddenColum
 export const resetColumns = (): void => hiddenColumns.reset()
 export const useHiddenColumns = (): string[] => hiddenColumns.use()
 
+const sidebarFlags = flagStore('bluegum.sidebar')
+export const setSidebarFlag = (flag: string, on: boolean): void => sidebarFlags.set(flag, on)
+export const useSidebarFlags = (): string[] => sidebarFlags.use()
+
 export type PanelName = 'sidebar' | 'details'
 const collapsedPanels = flagStore('bluegum.panels.collapsed')
 export const setPanelCollapsed = (panel: PanelName, collapsed: boolean): void => collapsedPanels.set(panel, collapsed)

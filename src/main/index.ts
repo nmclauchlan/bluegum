@@ -7,6 +7,7 @@ import { setupUpdater } from './updater'
 import * as journal from './undo'
 import { getSettings, setSettings } from './settings'
 import { hostApi } from './hosts'
+import { loadWindowState, trackWindowState } from './windowState'
 import type { MainSettings } from '@shared/types'
 import type { GitApi, RepoInfo } from '@shared/types'
 
@@ -68,9 +69,9 @@ async function writeRecent(list: RepoInfo[]): Promise<void> {
 }
 
 function createWindow(): void {
+  const state = loadWindowState()
   const win = new BrowserWindow({
-    width: 1400,
-    height: 900,
+    ...state.bounds,
     minWidth: 900,
     minHeight: 600,
     show: false,
@@ -85,7 +86,11 @@ function createWindow(): void {
       contextIsolation: true
     }
   })
-  win.on('ready-to-show', () => win.show())
+  win.on('ready-to-show', () => {
+    if (state.maximized) win.maximize()
+    win.show()
+  })
+  trackWindowState(win)
   const shot = process.env['BLUEGUM_SCREENSHOT']
   if (shot) {
     win.webContents.on('console-message', (event) => {

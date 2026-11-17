@@ -82,6 +82,14 @@ function parseRefs(decorations: string): Ref[] {
   return refs
 }
 
+async function selection(path: string, filter?: GraphFilter): Promise<string[]> {
+  if (!filter?.solo?.length) return logSelection(filter)
+  const out = await git(path).raw(['for-each-ref', '--format=%(refname)', ...filter.solo]).catch(() => '')
+  const present = new Set(out.split('\n').map((l) => l.trim()))
+  const solo = filter.solo.filter((r) => present.has(r))
+  return logSelection(solo.length ? { solo } : { hide: filter.hide })
+}
+
 function logSelection(filter?: GraphFilter): string[] {
   if (filter?.solo?.length) return filter.solo
   const hide = filter?.hide ?? []
@@ -98,9 +106,10 @@ function logSelection(filter?: GraphFilter): string[] {
 export async function searchCommits(path: string, query: string, mode: CommitSearchMode, filter?: GraphFilter): Promise<string[]> {
   const q = query.trim()
   if (!q) return []
+  const refs = await selection(path, filter)
   const run = (args: string[]): Promise<string[]> =>
     gitWithEnv({}, path, 30_000)
-      .raw(['log', ...logSelection(filter), '--format=%H', '-n', '2000', ...args])
+      .raw(['log', ...refs, '--format=%H', '-n', '2000', ...args])
       .then(
         (out) => out.split('\n').map((l) => l.trim()).filter(Boolean),
         () => []
@@ -126,7 +135,7 @@ export async function searchCommits(path: string, query: string, mode: CommitSea
 export async function log(path: string, limit: number, filter?: GraphFilter): Promise<Commit[]> {
   const format = ['%H', '%P', '%an', '%ae', '%at', '%s', '%D', '%b'].join(FIELD) + RECORD
   const out = await git(path).raw([
-    'log', ...logSelection(filter), '--topo-order', '--decorate=full', `--format=${format}`, '-n', String(limit), '--'
+    'log', ...(await selection(path, filter)), '--topo-order', '--decorate=full', `--format=${format}`, '-n', String(limit), '--'
   ]).catch(() => '')
   const commits: Commit[] = []
   for (const rec of out.split(RECORD)) {

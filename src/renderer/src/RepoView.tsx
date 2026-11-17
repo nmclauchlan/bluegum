@@ -3,6 +3,7 @@ import { AnimatePresence } from 'motion/react'
 import type { Commit, CommitBuild, CommitSearchMode, GoneUpstream, GraphFilter, RebaseAction, RebaseStep, HostInfo, PullRequest, RepoInfo, RepoRefs, RepoStatus, UndoInfo } from '@shared/types'
 import { CreatePrDialog } from './components/CreatePrDialog'
 import { retireBranch } from './upstream'
+import { loadGraphFilter, saveGraphFilter } from './repoPrefs'
 import { Loading } from './components/Spinner'
 import { buildRefMenu, type FocusRef } from './refMenu'
 import { PrPanel } from './components/PrPanel'
@@ -88,8 +89,23 @@ export function RepoView({
   const [selectedPr, setSelectedPr] = useState<PullRequest | null>(null)
   const [prRefresh, setPrRefresh] = useState(0)
   const [creatingPr, setCreatingPr] = useState<string | false>(false)
-  const [graphFilter, setGraphFilter] = useState<GraphFilter>({})
+  const [graphFilter, setGraphFilter] = useState<GraphFilter>(() => loadGraphFilter(repo.path))
   const filtered = !!graphFilter.solo?.length || !!graphFilter.hide?.length
+  useEffect(() => saveGraphFilter(repo.path, graphFilter), [repo.path, graphFilter])
+  useEffect(() => {
+    if (!refs) return
+    const present = new Set([
+      ...refs.branches.map((b) => `refs/heads/${b.name}`),
+      ...refs.remotes.map((r) => `refs/remotes/${r.remote}/${r.name}`),
+      ...refs.tags.map((t) => `refs/tags/${t.name}`)
+    ])
+    setGraphFilter((f) => {
+      const solo = f.solo?.filter((r) => present.has(r)) ?? []
+      const hide = f.hide?.filter((r) => present.has(r)) ?? []
+      if (solo.length === (f.solo?.length ?? 0) && hide.length === (f.hide?.length ?? 0)) return f
+      return { ...(solo.length && { solo }), ...(hide.length && { hide }) }
+    })
+  }, [refs])
 
   const refreshPrs = useCallback(async () => {
     try {

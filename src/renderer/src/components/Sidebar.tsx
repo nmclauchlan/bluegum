@@ -5,28 +5,30 @@ import type { Actions } from '../actions'
 import { Loading } from './Spinner'
 import { BuildMarker, buildsFor } from './BuildStatus'
 import { hostName, hostPath, prNoun, prPrefix } from '../util'
-import { setPanelCollapsed } from '../layout'
+import { setPanelCollapsed, setSidebarFlag, useSidebarFlags } from '../layout'
 import { Icon } from './Icon'
 import { focusItem, listKeys, navItems, useRovingFocus } from '../keynav'
 
 const TAG_LIMIT = 10
 
 function Section({
+  id,
   title,
   count,
   forceOpen,
   children
 }: {
+  id: string
   title: string
   count: number
   forceOpen: boolean
   children: React.ReactNode
 }): React.JSX.Element {
-  const [open, setOpen] = useState(true)
+  const open = !useSidebarFlags().includes(`closed:${id}`)
   const shown = open || forceOpen
   return (
     <div>
-      <div className="section-title" data-nav role="treeitem" aria-level={1} aria-expanded={shown} onClick={() => setOpen(!open)}>
+      <div className="section-title" data-nav role="treeitem" aria-level={1} aria-expanded={shown} onClick={() => setSidebarFlag(`closed:${id}`, open)}>
         <span>
           <Icon name="chevronRight" size={12} className={`disclosure${shown ? ' open' : ''}`} />
           {title}
@@ -83,7 +85,8 @@ export function Sidebar({
   builds?: Record<string, CommitBuild[]>
 }): React.JSX.Element {
   const [query, setQuery] = useState('')
-  const [allTags, setAllTags] = useState(false)
+  const allTags = useSidebarFlags().includes('all-tags')
+  const setAllTags = (on: boolean): void => setSidebarFlag('all-tags', on)
   const input = useRef<HTMLInputElement>(null)
   const tree = useRovingFocus<HTMLDivElement>()
   const q = query.trim().toLowerCase()
@@ -200,7 +203,7 @@ export function Sidebar({
       </div>
       {filtering && total === 0 && <div className="empty">No matches for “{query}”</div>}
       <div ref={tree} role="tree" aria-label="Branches, tags and stashes" onKeyDown={(e) => listKeys(e)}>
-        <Section title="Local" count={branches.length} forceOpen={filtering}>
+        <Section id="local" title="Local" count={branches.length} forceOpen={filtering}>
           {branches.map((b) => (
             <div
               key={b.name}
@@ -239,7 +242,7 @@ export function Sidebar({
           {branches.length === 0 && !filtering && <div className="empty">No branches</div>}
         </Section>
         {host && (
-          <Section title={host.kind === 'gitlab' ? 'Merge requests' : 'Pull requests'} count={hasAccount ? shownPrs.length : 0} forceOpen={filtering}>
+          <Section id="requests" title={host.kind === 'gitlab' ? 'Merge requests' : 'Pull requests'} count={hasAccount ? shownPrs.length : 0} forceOpen={filtering}>
             {!hasAccount ? (
               <div className="connect-row">
                 <button onClick={() => actions.connectAccount(host.kind, host.baseUrl)}>Connect to {hostName(host.kind)}</button>
@@ -270,7 +273,7 @@ export function Sidebar({
             )}
           </Section>
         )}
-        <Section title="Remote" count={remotes.length} forceOpen={filtering}>
+        <Section id="remote" title="Remote" count={remotes.length} forceOpen={filtering}>
           {[...remoteGroups.entries()].map(([remote, list]) => (
             <div key={remote}>
               <div className="remote-group" data-nav role="treeitem" aria-level={2}>
@@ -298,7 +301,7 @@ export function Sidebar({
           ))}
           {remotes.length === 0 && !filtering && <div className="empty">No remote branches</div>}
         </Section>
-        <Section title="Tags" count={tags.length} forceOpen={filtering}>
+        <Section id="tags" title="Tags" count={tags.length} forceOpen={filtering}>
           {(filtering || allTags ? tags : tags.slice(0, TAG_LIMIT)).map((t) => (
             <div
               key={t.name}
@@ -324,7 +327,7 @@ export function Sidebar({
           )}
           {tags.length === 0 && !filtering && <div className="empty">No tags</div>}
         </Section>
-        <Section title="Stashes" count={stashes.length} forceOpen={filtering}>
+        <Section id="stashes" title="Stashes" count={stashes.length} forceOpen={filtering}>
           {stashes.map((s) => (
             <div
               key={s.index}

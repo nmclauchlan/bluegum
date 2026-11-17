@@ -18,6 +18,7 @@ import { BrandIcon } from './components/BrandIcon'
 import { RepoView } from './RepoView'
 import { errorMessage, hostName } from './util'
 import { retireBranch } from './upstream'
+import { RepoPathContext } from './repoPrefs'
 import { applyTheme, currentTheme, setTheme, THEMES, useTheme, type Theme } from './themes'
 import { setPanelCollapsed, useCollapsedPanels } from './layout'
 import { collectCommands, type Command } from './commands'
@@ -958,15 +959,16 @@ export default function App(): React.JSX.Element {
           )
         )}
         {tabs.map((t) => (
-          <RepoView
-            key={t.path}
-            repo={t}
-            active={!home && t.path === activePath}
-            shell={shell}
-            onClose={() => closeTab(t.path)}
-            focus={focus && focus.path === t.path ? focus : null}
-            backgroundFetching={fetchingPaths.has(t.path)}
-          />
+          <RepoPathContext.Provider key={t.path} value={t.path}>
+            <RepoView
+              repo={t}
+              active={!home && t.path === activePath}
+              shell={shell}
+              onClose={() => closeTab(t.path)}
+              focus={focus && focus.path === t.path ? focus : null}
+              backgroundFetching={fetchingPaths.has(t.path)}
+            />
+          </RepoPathContext.Provider>
         ))}
         <AnimatePresence>
           {infoDialog === 'about' && <AboutDialog key="about" onClose={() => setInfoDialog(null)} />}
