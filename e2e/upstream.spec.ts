@@ -20,8 +20,6 @@ test('pulling a branch that was squash-merged and deleted on the remote offers t
     await page.evaluate(() => localStorage.setItem('bluegum.settings', JSON.stringify({ backgroundFetch: 0 })))
     await page.reload()
     const v = view(page)
-    await expect(v.locator('.statusbar .sync-upstream')).toHaveText('→ origin/feature/export')
-
     await v.getByRole('button', { name: /^Pull\d*$/ }).click()
     const dialog = page.getByRole('alertdialog', { name: 'origin/feature/export no longer exists' })
     await expect(dialog).toContainText('Everything on feature/export is already in main')

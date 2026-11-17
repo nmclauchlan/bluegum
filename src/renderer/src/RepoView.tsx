@@ -615,7 +615,7 @@ export function RepoView({
       pull: async (mode) => {
         const branch = refs?.branches.find((b) => b.current)
         if (branch?.gone) return checkGone(branch.name, 'Pulling')
-        const result = { gone: false }
+        const result: { gone: string | null } = { gone: null }
         await run('Pulling', async () => {
           let conflicted = false
           try {
@@ -628,13 +628,14 @@ export function RepoView({
               }
             }, 'The pull has conflicts to resolve')
           } catch (e) {
-            if (!branch?.upstream || !UPSTREAM_MISSING.test(errorMessage(e))) throw e
-            result.gone = true
+            if (!UPSTREAM_MISSING.test(errorMessage(e))) throw e
+            result.gone = branch?.name ?? (await window.git.refs(path)).branches.find((b) => b.current)?.name ?? null
+            if (!result.gone) throw e
             return false
           }
           if (!conflicted) shell.showInfo('Pulled')
         })
-        if (result.gone && branch) await checkGone(branch.name, 'Pulling')
+        if (result.gone) await checkGone(result.gone, 'Pulling')
       },
       push: () =>
         run('Pushing', async () => {
