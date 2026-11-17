@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence } from 'motion/react'
-import type { Commit, CommitBuild, CommitSearchMode, GraphFilter, RebaseAction, RebaseStep, HostInfo, PullRequest, RepoInfo, RepoRefs, RepoStatus, UndoInfo } from '@shared/types'
+import type { Commit, CommitBuild, CommitSearchMode, GoneUpstream, GraphFilter, RebaseAction, RebaseStep, HostInfo, PullRequest, RepoInfo, RepoRefs, RepoStatus, UndoInfo } from '@shared/types'
 import { CreatePrDialog } from './components/CreatePrDialog'
 import { Loading } from './components/Spinner'
 import { buildRefMenu, type FocusRef } from './refMenu'
@@ -30,6 +30,7 @@ const PAGE_ROWS = 15
 const PANEL_MS = 260
 const DONE_MS = 1400
 const INTRO_MS = 900
+const UPSTREAM_MISSING = /no such ref was fetched|couldn't find remote ref/i
 const BUILD_COMMITS = 50
 const BUILD_LOOKUPS = 150
 
@@ -433,10 +434,10 @@ export function RepoView({
   }, [rows, selected, refs?.stashes])
 
   const run = useCallback(
-    async (label: string, fn: () => Promise<void>, successMessage?: string) => {
+    async (label: string, fn: () => Promise<void | false>, successMessage?: string) => {
       setBusy(label)
       try {
-        await fn()
+        if ((await fn()) === false) return
         setDone(label)
         if (successMessage) shell.showInfo(successMessage)
       } catch (e) {
@@ -495,6 +496,39 @@ export function RepoView({
       await leased(branch, () => push(true))
       return true
     }
+  }
+
+  const offerGone = async (branch: string, { upstream, remote, base, merged }: GoneUpstream): Promise<void> => {
+    const landed = merged && base
+    const message = landed
+      ? `There's nothing to pull because ${upstream} was deleted. Everything on ${branch} is already in ${base}, so it was most likely merged and cleaned up.`
+      : `There's nothing to pull because ${upstream} was deleted${base ? `, and ${branch} has commits that aren't in ${base}` : ''}. Push it to put it back, or stop tracking the deleted copy.`
+    const choice = await shell.choose(`${upstream} no longer exists`, message, [
+      ...(landed ? [{ id: 'retire', label: `Switch to ${base} and delete ${branch}`, primary: true }] : []),
+      { id: 'push', label: `Push ${branch} to ${remote} again`, primary: !landed },
+      { id: 'untrack', label: `Keep ${branch} local and stop tracking it` }
+    ])
+    if (choice === 'retire' && base) {
+      void run(
+        'Switching',
+        async () => {
+          await window.git.checkout(path, base)
+          await window.git.fastForward(path, `${remote}/${base}`).catch(() => undefined)
+          await window.git.deleteBranch(path, branch, true)
+        },
+        `Switched to ${base} and deleted ${branch}`
+      )
+    } else if (choice === 'push') void run('Pushing', () => window.git.pushBranch(path, branch), `Pushed ${branch} to ${upstream}`)
+    else if (choice === 'untrack') void run('Updating', () => window.git.unsetUpstream(path, branch), `${branch} no longer tracks ${upstream}`)
+  }
+
+  const checkGone = async (branch: string, label = 'Checking'): Promise<void> => {
+    const found: { info?: GoneUpstream } = {}
+    await run(label, async () => {
+      found.info = await window.git.goneUpstream(path, branch)
+      return false
+    })
+    if (found.info) await offerGone(branch, found.info)
   }
 
   const conflictAware = async (fn: () => Promise<void>, note = 'There are conflicts to resolve'): Promise<void> => {
@@ -578,19 +612,30 @@ export function RepoView({
           shell.showInfo(`Added ${pattern} to .gitignore`)
         }),
       fetch: () => run('Fetching', () => window.git.fetch(path), 'Fetched'),
-      pull: (mode) =>
-        run('Pulling', async () => {
+      pull: async (mode) => {
+        const branch = refs?.branches.find((b) => b.current)
+        if (branch?.gone) return checkGone(branch.name, 'Pulling')
+        const result = { gone: false }
+        await run('Pulling', async () => {
           let conflicted = false
-          await conflictAware(async () => {
-            try {
-              await window.git.pull(path, mode ?? currentSettings().pullMode)
-            } catch (e) {
-              conflicted = /CONFLICT|could not apply/i.test(errorMessage(e))
-              throw e
-            }
-          }, 'The pull has conflicts to resolve')
+          try {
+            await conflictAware(async () => {
+              try {
+                await window.git.pull(path, mode ?? currentSettings().pullMode)
+              } catch (e) {
+                conflicted = /CONFLICT|could not apply/i.test(errorMessage(e))
+                throw e
+              }
+            }, 'The pull has conflicts to resolve')
+          } catch (e) {
+            if (!branch?.upstream || !UPSTREAM_MISSING.test(errorMessage(e))) throw e
+            result.gone = true
+            return false
+          }
           if (!conflicted) shell.showInfo('Pulled')
-        }),
+        })
+        if (result.gone && branch) await checkGone(branch.name, 'Pulling')
+      },
       push: () =>
         run('Pushing', async () => {
           const current = refs?.branches.find((b) => b.current)
@@ -1065,7 +1110,9 @@ export function RepoView({
         )}
       </AnimatePresence>
       <div className="statusbar">
-        {refs && <SyncStatus refs={refs} fetchedAt={fetchedAt} fetching={backgroundFetching} busy={!!busy} onFetch={actions.fetch} />}
+        {refs && (
+          <SyncStatus refs={refs} fetchedAt={fetchedAt} fetching={backgroundFetching} busy={!!busy} onFetch={actions.fetch} onGone={(b) => void checkGone(b)} />
+        )}
         <span>
           {commits.length} commits{commits.length >= LOG_LIMIT ? ` (showing first ${LOG_LIMIT})` : ''}
         </span>

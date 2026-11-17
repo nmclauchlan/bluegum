@@ -5,7 +5,7 @@ import { Icon } from './Icon'
 
 const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
 
-function Tracking({ branch }: { branch: Branch }): React.JSX.Element {
+function Tracking({ branch, onGone }: { branch: Branch; onGone?: () => void }): React.JSX.Element {
   if (!branch.upstream) {
     return (
       <span className="sync-note" title={`${branch.name} has no upstream yet. Push it to publish it.`}>
@@ -15,9 +15,9 @@ function Tracking({ branch }: { branch: Branch }): React.JSX.Element {
   }
   if (branch.gone) {
     return (
-      <span className="sync-note gone" title={`${branch.upstream} no longer exists on the remote`}>
+      <button className="statusbar-link sync-note gone" title={`${branch.upstream} no longer exists on the remote. Click for options`} onClick={onGone}>
         {branch.upstream} deleted
-      </span>
+      </button>
     )
   }
   const ahead = branch.ahead ?? 0
@@ -51,13 +51,15 @@ export function SyncStatus({
   fetchedAt,
   fetching,
   busy,
-  onFetch
+  onFetch,
+  onGone
 }: {
   refs: RepoRefs
   fetchedAt: number | null
   fetching: boolean
   busy: boolean
   onFetch: () => void
+  onGone: (branch: string) => void
 }): React.JSX.Element {
   const [, setNow] = useState(0)
   useEffect(() => {
@@ -70,7 +72,7 @@ export function SyncStatus({
       <span className="sync-status">
         <Icon name="branch" size={12} />
         <span className="sync-branch">{branch ? branch.name : `Detached at ${shortHash(refs.headHash)}`}</span>
-        {branch && <Tracking branch={branch} />}
+        {branch && <Tracking branch={branch} onGone={busy ? undefined : () => onGone(branch.name)} />}
       </span>
       {fetching ? (
         <span className="spin" role="status">

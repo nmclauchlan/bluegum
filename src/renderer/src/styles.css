@@ -552,6 +552,9 @@ textarea { resize: vertical; font-family: inherit; }
 .dialog h3 { margin: 0; font-size: 15px; }
 .dialog p { margin: 0; color: var(--fg-dim); white-space: pre-wrap; user-select: text; }
 .dialog .buttons { display: flex; justify-content: flex-end; gap: 8px; }
+.choose-dialog { width: 460px; }
+.choose-dialog .choices { display: flex; flex-direction: column; gap: 6px; }
+.choose-dialog .choices button { text-align: left; padding: 8px 12px; }
 
 .settings-dialog { width: 600px; max-height: calc(100vh - 80px); overflow: auto; gap: 16px; }
 .settings-head { display: flex; align-items: center; gap: 10px; }

@@ -391,13 +391,14 @@ export default function App(): React.JSX.Element {
         }
       },
       confirm: dialogs.confirm,
+      choose: dialogs.choose,
       prompt: dialogs.prompt,
       showError,
       showInfo,
       openSettings: (suggestBaseUrl) => setSettingsOpen({ suggestBaseUrl }),
       openPath: (p) => void openPath(p)
     }),
-    [dialogs.confirm, dialogs.prompt, openPath, showError, showInfo]
+    [dialogs.confirm, dialogs.choose, dialogs.prompt, openPath, showError, showInfo]
   )
 
   const visibleTabs = tabs

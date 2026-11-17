@@ -220,6 +220,8 @@ const handlers: Handlers = {
   updateBranch: gitService.updateBranch,
   pushBranch: gitService.pushBranch,
   setUpstream: gitService.setUpstream,
+  unsetUpstream: gitService.unsetUpstream,
+  goneUpstream: gitService.goneUpstream,
   fastForward: (path, target) => journal.record(path, 'merge', `Fast-forward to ${shortRef(target)}`, () => gitService.fastForward(path, target)),
   rebase: (path, onto) => journal.record(path, 'merge', `Rebase onto ${shortRef(onto)}`, () => gitService.rebase(path, onto)),
   rebaseCommits: gitService.rebaseCommits,

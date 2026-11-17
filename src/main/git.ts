@@ -8,7 +8,7 @@ import {
   type CompareCommit, type CompareMode, type CompareSummary, type StashOptions, type PullMode, type MergeMode, type IgnoreKind,
   imageMime,
   type Commit, type CommitDetails, type FileChange, type ImageDiffResult, type ImageSource,
-  type OperationState, type IncomingUpstream, type Ref, type RepoSummary, type GraphFilter, type RepoInfo, type RepoRefs, type RepoStatus, type StatusFile
+  type OperationState, type IncomingUpstream, type GoneUpstream, type Ref, type RepoSummary, type GraphFilter, type RepoInfo, type RepoRefs, type RepoStatus, type StatusFile
 } from '@shared/types'
 
 const FIELD = '\x1f'
@@ -837,6 +837,41 @@ export async function pushBranch(path: string, branch: string, force = false): P
   const lease = force ? ['--force-with-lease'] : []
   if (up) await git(path).raw(['push', ...lease, up.remote, `refs/heads/${branch}:${up.ref}`])
   else await git(path).raw(['push', ...lease, '-u', 'origin', branch])
+}
+
+export async function unsetUpstream(path: string, branch: string): Promise<void> {
+  await git(path).raw(['branch', '--unset-upstream', branch])
+}
+
+async function remoteDefault(path: string, remote: string): Promise<string | null> {
+  const g = git(path)
+  const head = (await g.raw(['symbolic-ref', '--quiet', '--short', `refs/remotes/${remote}/HEAD`]).catch(() => '')).trim()
+  if (head.startsWith(`${remote}/`)) return head.slice(remote.length + 1)
+  const out = await g.raw(['for-each-ref', '--format=%(refname:lstrip=3)', `refs/remotes/${remote}/main`, `refs/remotes/${remote}/master`])
+  const names = out.split('\n').map((s) => s.trim()).filter(Boolean)
+  return names.includes('main') ? 'main' : (names[0] ?? null)
+}
+
+async function landedIn(path: string, branch: string, target: string): Promise<boolean> {
+  const g = git(path)
+  const tip = (await g.revparse([`refs/heads/${branch}`])).trim()
+  const base = (await g.raw(['merge-base', target, tip]).catch(() => '')).trim()
+  if (!base) return false
+  if (base === tip) return true
+  const squashed = (
+    await g.raw(['-c', 'user.name=Blue Gum', '-c', 'user.email=bluegum@localhost', 'commit-tree', `${tip}^{tree}`, '-p', base, '-m', 'squash check'])
+  ).trim()
+  return (await g.raw(['cherry', target, squashed])).trim().startsWith('-')
+}
+
+export async function goneUpstream(path: string, branch: string): Promise<GoneUpstream> {
+  const up = await upstreamOf(path, branch)
+  if (!up) throw new Error(`${branch} doesn't track a remote branch`)
+  await git(path).raw(['fetch', up.remote, '--prune', '--quiet']).catch(() => undefined)
+  const found = await remoteDefault(path, up.remote)
+  const base = found && found !== branch ? found : null
+  const merged = !!base && (await landedIn(path, branch, `${up.remote}/${base}`).catch(() => false))
+  return { upstream: `${up.remote}/${up.ref.replace(/^refs\/heads\//, '')}`, remote: up.remote, base, merged }
 }
 
 export async function setUpstream(path: string, branch: string, upstream: string): Promise<void> {

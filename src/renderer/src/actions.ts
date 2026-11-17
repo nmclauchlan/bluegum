@@ -1,11 +1,13 @@
 import type { IgnoreKind, MergeMode, PullMode, RebaseAction } from '@shared/types'
 import type { MenuItem } from './components/ContextMenu'
 import type { CompareRequest } from './components/CompareView'
+import type { Choice } from './components/Dialog'
 
 export interface Shell {
   openRepo(): void
   openMenu(e: React.MouseEvent, items: MenuItem[]): void
   confirm(title: string, message: string, danger?: boolean): Promise<boolean>
+  choose(title: string, message: string, options: Choice[]): Promise<string | null>
   prompt(title: string, label: string, defaultValue?: string): Promise<string | null>
   showError(message: string, title?: string): void
   showInfo(message: string): void

@@ -71,6 +71,13 @@ export interface Branch {
   gone?: boolean
 }
 
+export interface GoneUpstream {
+  upstream: string
+  remote: string
+  base: string | null
+  merged: boolean
+}
+
 export interface RemoteBranch {
   remote: string
   name: string
@@ -217,6 +224,8 @@ export interface GitApi {
   updateBranch(path: string, branch: string): Promise<void>
   pushBranch(path: string, branch: string, force?: boolean): Promise<void>
   setUpstream(path: string, branch: string, upstream: string): Promise<void>
+  unsetUpstream(path: string, branch: string): Promise<void>
+  goneUpstream(path: string, branch: string): Promise<GoneUpstream>
   fastForward(path: string, target: string): Promise<void>
   rebase(path: string, onto: string): Promise<void>
   rebaseCommits(path: string, base: string): Promise<RebaseCommit[]>
