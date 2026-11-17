@@ -522,10 +522,10 @@ export function RepoView({
     else if (choice === 'untrack') void run('Updating', () => window.git.unsetUpstream(path, branch), `${branch} no longer tracks ${upstream}`)
   }
 
-  const checkGone = async (branch: string, label = 'Checking'): Promise<void> => {
+  const checkGone = async (branch: string, label = 'Checking', refetch = true): Promise<void> => {
     const found: { info?: GoneUpstream } = {}
     await run(label, async () => {
-      found.info = await window.git.goneUpstream(path, branch)
+      found.info = await window.git.goneUpstream(path, branch, refetch)
       return false
     })
     if (found.info) await offerGone(branch, found.info)
@@ -635,7 +635,7 @@ export function RepoView({
           }
           if (!conflicted) shell.showInfo('Pulled')
         })
-        if (result.gone) await checkGone(result.gone, 'Pulling')
+        if (result.gone) await checkGone(result.gone, 'Pulling', false)
       },
       push: () =>
         run('Pushing', async () => {

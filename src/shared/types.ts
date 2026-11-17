@@ -225,7 +225,7 @@ export interface GitApi {
   pushBranch(path: string, branch: string, force?: boolean): Promise<void>
   setUpstream(path: string, branch: string, upstream: string): Promise<void>
   unsetUpstream(path: string, branch: string): Promise<void>
-  goneUpstream(path: string, branch: string): Promise<GoneUpstream>
+  goneUpstream(path: string, branch: string, refetch?: boolean): Promise<GoneUpstream>
   fastForward(path: string, target: string): Promise<void>
   rebase(path: string, onto: string): Promise<void>
   rebaseCommits(path: string, base: string): Promise<RebaseCommit[]>

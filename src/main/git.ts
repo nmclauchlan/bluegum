@@ -864,10 +864,10 @@ async function landedIn(path: string, branch: string, target: string): Promise<b
   return (await g.raw(['cherry', target, squashed])).trim().startsWith('-')
 }
 
-export async function goneUpstream(path: string, branch: string): Promise<GoneUpstream> {
+export async function goneUpstream(path: string, branch: string, refetch = true): Promise<GoneUpstream> {
   const up = await upstreamOf(path, branch)
   if (!up) throw new Error(`${branch} doesn't track a remote branch`)
-  await git(path).raw(['fetch', up.remote, '--prune', '--quiet']).catch(() => undefined)
+  if (refetch) await git(path).raw(['fetch', up.remote, '--prune', '--quiet']).catch(() => undefined)
   const found = await remoteDefault(path, up.remote)
   const base = found && found !== branch ? found : null
   const merged = !!base && (await landedIn(path, branch, `${up.remote}/${base}`).catch(() => false))
