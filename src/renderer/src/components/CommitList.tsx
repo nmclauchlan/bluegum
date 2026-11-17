@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { Commit, CommitBuild, Ref } from '@shared/types'
-import { LANE_COLORS, layoutGraph } from '../graph/layout'
+import { LANE_COLORS, layoutGraph, type GraphLayout } from '../graph/layout'
 import { formatDate, reducedMotion, shortHash, WIP_HASH } from '../util'
 import { resetColumns, resetLayout, setColumnHidden, setLayout, useHiddenColumns, useLayout, useWindowWidth, type Layout } from '../layout'
 import { useSettings } from '../settings'
@@ -22,6 +22,25 @@ const OVERSCAN = 12
 const NODE = 22
 const GAP = 8
 const AUTO_LANES = 6
+const LEAVE_MS = 260
+const REWRITE_MS = 900
+const RING_GAP = 8
+
+interface Leaving {
+  commits: Commit[]
+  layout: GraphLayout
+  gone: ReadonlySet<string>
+  moves: ReadonlyMap<string, { rows: number; lanes: number }>
+}
+
+interface Box {
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
+const NO_MOVES: ReadonlyMap<string, { rows: number; lanes: number }> = new Map()
 
 type ColKey = 'colRefs' | 'colGraph' | 'colAuthor' | 'colDate' | 'colSha'
 
@@ -302,7 +321,7 @@ function Header({
 }
 
 export function CommitList({
-  commits,
+  commits: latest,
   selected,
   onSelect,
   onContextMenu,
@@ -330,8 +349,12 @@ export function CommitList({
   searchBar?: React.ReactNode
   matches?: Set<string> | null
 }): React.JSX.Element {
-  const layout = useMemo(() => layoutGraph(commits), [commits])
+  const latestLayout = useMemo(() => layoutGraph(latest), [latest])
+  const [leaving, setLeaving] = useState<Leaving | null>(null)
+  const commits = leaving?.commits ?? latest
+  const layout = leaving?.layout ?? latestLayout
   const container = useRef<HTMLDivElement>(null)
+  const rowsRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const [range, setRange] = useState({ start: 0, end: 50 })
   const stored = useLayout()
@@ -388,41 +411,82 @@ export function CommitList({
 
   const known = useRef<Set<string> | null>(null)
   const onScreen = useRef<Commit[]>([])
+  const onScreenLayout = useRef<GraphLayout | null>(null)
   const [fresh, setFresh] = useState(NONE)
+  const [rewritten, setRewritten] = useState(NONE)
   const [unseen, setUnseen] = useState<string[]>([])
   useLayoutEffect(() => {
-    const hashes = commits.filter((c) => c.hash !== WIP_HASH).map((c) => c.hash)
+    const hashes = latest.filter((c) => c.hash !== WIP_HASH).map((c) => c.hash)
     const before = known.current
     known.current = new Set(hashes)
     const el = container.current
     const previous = onScreen.current
-    onScreen.current = commits
+    const previousLayout = onScreenLayout.current
+    onScreen.current = latest
+    onScreenLayout.current = latestLayout
+    setLeaving(null)
     const gliding = glide.current
     if (el && gliding) {
-      const at = gliding.hash ? commits.findIndex((c) => c.hash === gliding.hash) : 0
+      const at = gliding.hash ? latest.findIndex((c) => c.hash === gliding.hash) : 0
       if (at === -1) glide.current = null
       else if (gliding.hash && centred(el, at) !== gliding.top) glideTo(el, gliding.hash, centred(el, at))
     } else if (el && el.scrollTop > 0 && previous.length) {
       const first = Math.floor(el.scrollTop / ROW_H)
       const hash = previous[first]?.hash
-      const at = hash ? commits.findIndex((c) => c.hash === hash) : -1
+      const at = hash ? latest.findIndex((c) => c.hash === hash) : -1
       if (at !== -1 && at !== first) el.scrollTop = at * ROW_H + (el.scrollTop - first * ROW_H)
     }
     if (!before) return
     const added = hashes.filter((h) => !before.has(h))
+    const removed = [...before].filter((h) => !known.current!.has(h))
+    if (removed.length && removed.length <= FRESH_LIMIT && !reducedMotion()) {
+      const at = new Map(latest.map((c, i) => [c.hash, i]))
+      const oldOrder = previous.filter((c) => c.hash !== WIP_HASH).map((c) => c.hash)
+      const oldRows = new Set(removed.map((h) => oldOrder.indexOf(h)))
+      if (added.length === removed.length && added.every((h) => oldRows.has(hashes.indexOf(h)))) {
+        setRewritten(new Set(added))
+        return
+      }
+      if (!added.length && el && previousLayout) {
+        const gone = new Set(previous.filter((c) => !at.has(c.hash)).map((c) => c.hash))
+        const firstGone = previous.findIndex((c) => gone.has(c.hash))
+        const top = Math.floor(el.scrollTop / ROW_H)
+        if (firstGone >= top && firstGone <= top + Math.ceil(el.clientHeight / ROW_H)) {
+          const lane = (l: number): number => Math.min(l, MAX_LANES - 1)
+          const moves = new Map<string, { rows: number; lanes: number }>()
+          previous.forEach((c, i) => {
+            const j = at.get(c.hash)
+            if (j === undefined) return
+            const lanes = lane(latestLayout.rows[j]?.lane ?? 0) - lane(previousLayout.rows[i]?.lane ?? 0)
+            if (j !== i || lanes) moves.set(c.hash, { rows: j - i, lanes })
+          })
+          setLeaving({ commits: previous, layout: previousLayout, gone, moves })
+        }
+      }
+    }
     if (!added.length || added.length > FRESH_LIMIT || added.length > hashes.length / 2) return
     setFresh(new Set(added))
     if (el && el.scrollTop >= ROW_H) {
       const top = Math.floor(el.scrollTop / ROW_H)
-      const above = added.filter((h) => commits.findIndex((c) => c.hash === h) < top)
+      const above = added.filter((h) => latest.findIndex((c) => c.hash === h) < top)
       if (above.length) setUnseen((u) => [...u, ...above])
     }
-  }, [commits])
+  }, [latest, latestLayout])
+  useEffect(() => {
+    if (!leaving) return
+    const t = setTimeout(() => setLeaving(null), LEAVE_MS)
+    return () => clearTimeout(t)
+  }, [leaving])
   useEffect(() => {
     if (!fresh.size) return
     const t = setTimeout(() => setFresh(NONE), 1800)
     return () => clearTimeout(t)
   }, [fresh])
+  useEffect(() => {
+    if (!rewritten.size) return
+    const t = setTimeout(() => setRewritten(NONE), REWRITE_MS)
+    return () => clearTimeout(t)
+  }, [rewritten])
 
   const [landed, setLanded] = useState<string | null>(null)
   const lastJump = useRef<number | null>(null)
@@ -462,6 +526,48 @@ export function CommitList({
   const headIndex = useMemo(() => commits.findIndex((c) => c.refs.some((r) => r.kind === 'head')), [commits])
   const headRow = headIndex === -1 ? null : commits[headIndex]
   const headRefsKey = headRow ? `${headRow.hash}:${headRow.refs.map((r) => r.name).join(',')}` : ''
+
+  const gone = leaving?.gone ?? NONE
+  const moves = leaving?.moves ?? NO_MOVES
+  const shift = (hash: string | undefined): React.CSSProperties | undefined => {
+    const m = hash === undefined ? undefined : moves.get(hash)
+    return m && ({ '--dx': `${m.lanes * laneW}px`, '--dy': `${m.rows * ROW_H}px` } as React.CSSProperties)
+  }
+
+  const headLane = headRow && headRow.hash !== WIP_HASH ? (layout.rows[headIndex]?.lane ?? MAX_LANES) : MAX_LANES
+  const ring =
+    headRow && headLane < MAX_LANES
+      ? { hash: headRow.hash, x: cx(headLane), y: cy(headIndex), color: LANE_COLORS[layout.rows[headIndex].color % LANE_COLORS.length] }
+      : null
+  const [ringKey, setRingKey] = useState(0)
+  const lastRing = useRef<{ hash: string; x: number; y: number } | null>(null)
+  useLayoutEffect(() => {
+    const last = lastRing.current
+    lastRing.current = ring && { hash: ring.hash, x: ring.x, y: ring.y }
+    if (last && ring && last.hash === ring.hash && (last.x !== ring.x || last.y !== ring.y)) setRingKey((k) => k + 1)
+  }, [ring?.hash, ring?.x, ring?.y])
+
+  const [ghost, setGhost] = useState<{ n: number; from: Box; to: Box } | null>(null)
+  const lastBadge = useRef<{ key: string; box: Box } | null>(null)
+  useLayoutEffect(() => {
+    const rowsEl = rowsRef.current
+    const badge = rowsEl?.querySelector<HTMLElement>('.refs-cell > .ref-badge.branch.head')
+    const row = badge?.closest<HTMLElement>('.commit-row')
+    if (!rowsEl || !badge || !row) {
+      lastBadge.current = null
+      return
+    }
+    const outer = rowsEl.getBoundingClientRect()
+    const r = badge.getBoundingClientRect()
+    const box = { x: r.left - outer.left, y: r.top - outer.top, w: r.width, h: r.height }
+    const key = `${row.dataset.hash}:${badge.dataset.refName}`
+    const last = lastBadge.current
+    lastBadge.current = { key, box }
+    if (!last || last.key === key || reducedMotion()) return
+    if (Math.abs(last.box.x - box.x) < 1 && Math.abs(last.box.y - box.y) < 1) return
+    setGhost((g) => ({ n: (g?.n ?? 0) + 1, from: last.box, to: box }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [headRefsKey, range.start, range.end, leaving, cols.colRefs, hiddenCols])
 
   useLayoutEffect(() => {
     if (stored.colRefs || !headRow) return
@@ -528,6 +634,7 @@ export function CommitList({
     const c = commits[i]
     if (!c) break
     const isWip = c.hash === WIP_HASH
+    const moved = shift(c.hash)
     rows.push(
       <div
         key={c.hash}
@@ -535,8 +642,8 @@ export function CommitList({
         role="option"
         aria-selected={selected === c.hash}
         data-hash={c.hash}
-        className={`commit-row${selected === c.hash ? ' selected' : ''}${isWip ? ' wip' : ''}${matches?.has(c.hash) ? ' match' : ''}${fresh.has(c.hash) ? ' fresh' : ''}${landed === c.hash ? ' landed' : ''}`}
-        style={{ top: i * ROW_H, '--i': i - start } as React.CSSProperties}
+        className={`commit-row${selected === c.hash ? ' selected' : ''}${isWip ? ' wip' : ''}${matches?.has(c.hash) ? ' match' : ''}${fresh.has(c.hash) ? ' fresh' : ''}${landed === c.hash ? ' landed' : ''}${gone.has(c.hash) ? ' gone' : ''}${moved ? ' shifting' : ''}${rewritten.has(c.hash) ? ' rewritten' : ''}`}
+        style={{ top: i * ROW_H, '--i': i - start, ...moved } as React.CSSProperties}
         onClick={() => onSelect(c.hash)}
         onContextMenu={(e) => {
           e.preventDefault()
@@ -571,12 +678,13 @@ export function CommitList({
       nodes.push(
         <div
           key={'n' + c.hash}
-          className={`graph-node${i === headIndex ? ' head' : ''}${fresh.has(c.hash) ? ' fresh' : ''}`}
+          className={`graph-node${i === headIndex ? ' head' : ''}${fresh.has(c.hash) ? ' fresh' : ''}${gone.has(c.hash) ? ' gone' : ''}${moved ? ' shifting' : ''}${rewritten.has(c.hash) ? ' rewritten' : ''}`}
           style={{
             left: cx(r.lane) - NODE / 2,
             top: cy(i) - NODE / 2,
             borderColor: LANE_COLORS[r.color % LANE_COLORS.length],
-            color: LANE_COLORS[r.color % LANE_COLORS.length]
+            color: LANE_COLORS[r.color % LANE_COLORS.length],
+            ...moved
           }}
         >
           <Avatar email={c.email} name={c.author} enabled={showAvatars} />
@@ -659,7 +767,7 @@ export function CommitList({
         }}
       >
         {loading && total === 0 && <Loading label="Loading history…" />}
-        <div className="rows" style={{ height: total * ROW_H }}>
+        <div className={leaving ? 'rows leaving' : 'rows'} ref={rowsRef} style={{ height: total * ROW_H }}>
           {shown('colGraph') && (
           <div className="graph-clip" style={{ left: shown('colRefs') ? cols.colRefs + GAP : 0, width: graphCol, height: total * ROW_H }}>
             <svg className="graph" width={graphWidth} height={total * ROW_H}>
@@ -675,12 +783,20 @@ export function CommitList({
                   x1 === x2
                     ? `M${x1},${y1} L${x2},${y2}`
                     : `M${x1},${y1} C${x1},${y1 + ROW_H * 0.6} ${x2},${y2 - ROW_H * 0.6} ${x2},${y2}`
-                const arriving = !dashed && fresh.has(commits[e.fromRow]?.hash)
+                const from = commits[e.fromRow]?.hash
+                const to = commits[e.toRow]?.hash
+                const arriving = !dashed && fresh.has(from)
+                const leavingEdge = gone.has(from) || gone.has(to)
+                const ma = from === undefined ? undefined : moves.get(from)
+                const mb = to === undefined ? undefined : moves.get(to)
+                const together = (ma?.rows ?? 0) === (mb?.rows ?? 0) && (ma?.lanes ?? 0) === (mb?.lanes ?? 0)
+                const edgeClass = leavingEdge ? 'gone-edge' : !together ? 'fading-edge' : ma ? 'shifting' : arriving ? 'fresh-edge' : undefined
                 return (
                   <path
                     key={`${e.fromRow}-${e.fromLane}-${e.toRow}-${e.toLane}-${i}`}
-                    className={arriving ? 'fresh-edge' : undefined}
-                    pathLength={arriving ? 1 : undefined}
+                    className={edgeClass}
+                    style={together ? shift(from) : undefined}
+                    pathLength={arriving || leavingEdge ? 1 : undefined}
                     d={d}
                     stroke={color}
                     strokeWidth={2}
@@ -696,10 +812,13 @@ export function CommitList({
                 if (showAvatars && !isWip && !r.isMerge) return null
                 const color = LANE_COLORS[r.color % LANE_COLORS.length]
                 const isHead = i === headIndex
+                const hash = commits[i].hash
+                const moved = shift(hash)
                 return (
                   <circle
                     key={i}
-                    className={fresh.has(commits[i].hash) ? 'fresh-node' : undefined}
+                    className={gone.has(hash) ? 'gone-node' : moved ? 'shifting' : rewritten.has(hash) ? 'rewritten-node' : fresh.has(hash) ? 'fresh-node' : undefined}
+                    style={moved}
                     cx={cx(r.lane)}
                     cy={cy(i)}
                     r={isWip ? (showAvatars ? 8 : 5) : isHead ? 6 : r.isMerge ? (showAvatars ? 5 : 4) : 5}
@@ -712,9 +831,43 @@ export function CommitList({
               })}
             </svg>
             {nodes}
+            {ring && (
+              <div
+                key={ringKey}
+                className={`head-ring${moves.has(ring.hash) ? ' shifting' : ''}`}
+                aria-hidden
+                style={
+                  {
+                    '--ring': `${(showAvatars ? NODE : 12) + RING_GAP}px`,
+                    transform: `translate(${ring.x}px, ${ring.y}px)`,
+                    color: ring.color,
+                    ...shift(ring.hash)
+                  } as React.CSSProperties
+                }
+              />
+            )}
           </div>
           )}
           {rows}
+          {ghost && (
+            <div
+              key={ghost.n}
+              className="head-ghost"
+              aria-hidden
+              style={
+                {
+                  left: ghost.to.x,
+                  top: ghost.to.y,
+                  width: ghost.to.w,
+                  height: ghost.to.h,
+                  '--gx': `${ghost.from.x - ghost.to.x}px`,
+                  '--gy': `${ghost.from.y - ghost.to.y}px`,
+                  '--gs': ghost.from.w / Math.max(1, ghost.to.w)
+                } as React.CSSProperties
+              }
+              onAnimationEnd={() => setGhost(null)}
+            />
+          )}
         </div>
       </div>
     </div>

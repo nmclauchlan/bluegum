@@ -5,6 +5,10 @@ import { pullItems } from '../refMenu'
 import { PULL_LABELS, useSettings } from '../settings'
 import { setPanelCollapsed, useCollapsedPanels, type PanelName } from '../layout'
 import { Icon, type IconName } from './Icon'
+import { AnimatePresence, motion } from 'motion/react'
+import { Digits, useRolling } from './Rolling'
+
+const BADGE_EXIT = { opacity: 0, scale: 0.4, transition: { duration: 0.18 } }
 
 function PanelIcon({ side, open }: { side: 'left' | 'right'; open: boolean }): React.JSX.Element {
   const x = side === 'left' ? 2.5 : 10
@@ -22,6 +26,7 @@ export function Toolbar({
   refs,
   busy,
   busyLabel = null,
+  failed = null,
   actions,
   host,
   prs,
@@ -43,12 +48,16 @@ export function Toolbar({
   onSearch: () => void
   undoInfo: UndoInfo
   done?: string | null
+  failed?: string | null
 }): React.JSX.Element {
   const icon = (name: IconName, label: string): React.JSX.Element =>
-    done === label ? <Icon name="check" className="done-tick" /> : <Icon name={name} />
+    done === label ? <Icon name="check" className="done-tick" /> : <Icon name={name} className={busyLabel === label ? `working-${name}` : undefined} />
+  const syncClass = (label: string): string => (failed === label ? 'sync shake' : 'sync')
   const mod = /Mac/.test(navigator.platform) ? '⌘' : 'Ctrl+'
   const { pullMode } = useSettings()
   const current = refs?.branches.find((b) => b.current)
+  const behind = useRolling(current?.behind ?? 0, current?.name ?? '')
+  const ahead = useRolling(current?.ahead ?? 0, current?.name ?? '')
   const currentPr = current ? prs.find((p) => p.sourceBranch === current.name) : undefined
   const collapsed = useCollapsedPanels()
   const toggle = (panel: PanelName, label: string, side: 'left' | 'right'): React.JSX.Element => {
@@ -94,15 +103,21 @@ export function Toolbar({
           Redo
         </button>
       </span>
-      <button disabled={busy} aria-busy={busyLabel === 'Fetching'} onClick={actions.fetch} title="git fetch --all --prune">
+      <button className={syncClass('Fetching')} disabled={busy} aria-busy={busyLabel === 'Fetching'} onClick={actions.fetch} title="git fetch --all --prune">
         {icon('fetch', 'Fetching')}
         Fetch
       </button>
       <span className="split-button">
-        <button disabled={busy} aria-busy={busyLabel === 'Pulling'} onClick={() => actions.pull()} title={`Pull (${PULL_LABELS[pullMode].toLowerCase()})`}>
+        <button className={syncClass('Pulling')} disabled={busy} aria-busy={busyLabel === 'Pulling'} onClick={() => actions.pull()} title={`Pull (${PULL_LABELS[pullMode].toLowerCase()})`}>
           {icon('pull', 'Pulling')}
           Pull
-          {current?.behind ? <span key={current.behind} className="badge">{current.behind}</span> : null}
+          <AnimatePresence initial={false}>
+            {behind.visible && (
+              <motion.span key="behind" className="badge" exit={BADGE_EXIT}>
+                <Digits n={behind.shown} falling={behind.falling} />
+              </motion.span>
+            )}
+          </AnimatePresence>
         </button>
         <button
           className="split-caret"
@@ -117,10 +132,16 @@ export function Toolbar({
           <Icon name="chevronDown" size={12} />
         </button>
       </span>
-      <button disabled={busy} aria-busy={busyLabel === 'Pushing'} onClick={actions.push} title="git push">
+      <button className={syncClass('Pushing')} disabled={busy} aria-busy={busyLabel === 'Pushing'} onClick={actions.push} title="git push">
         {icon('push', 'Pushing')}
         Push
-        {current?.ahead ? <span key={current.ahead} className="badge">{current.ahead}</span> : null}
+        <AnimatePresence initial={false}>
+          {ahead.visible && (
+            <motion.span key="ahead" className="badge" exit={BADGE_EXIT}>
+              <Digits n={ahead.shown} falling={ahead.falling} />
+            </motion.span>
+          )}
+        </AnimatePresence>
       </button>
       <button disabled={busy} aria-busy={busyLabel === 'Creating branch'} onClick={() => actions.createBranch('HEAD')} title="Create a branch at HEAD">
         <Icon name="branch" />

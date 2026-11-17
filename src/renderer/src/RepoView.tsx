@@ -31,6 +31,7 @@ const PANEL_MS = 260
 const DONE_MS = 1400
 const INTRO_MS = 900
 const UPSTREAM_MISSING = /no such ref was fetched|couldn't find remote ref/i
+const FAILED_MS = 600
 const BUILD_COMMITS = 50
 const BUILD_LOOKUPS = 150
 
@@ -66,6 +67,7 @@ export function RepoView({
   const [rebasing, setRebasing] = useState<{ base: string; preset?: Record<string, RebaseAction> } | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
+  const [failed, setFailed] = useState<string | null>(null)
   const [intro, setIntro] = useState(true)
   const [viewing, setViewing] = useState<FileViewRequest | null>(null)
   const [comparing, setComparing] = useState<CompareRequest | null>(null)
@@ -441,6 +443,7 @@ export function RepoView({
         setDone(label)
         if (successMessage) shell.showInfo(successMessage)
       } catch (e) {
+        setFailed(label)
         shell.showError(errorMessage(e), `${label} failed`)
       } finally {
         setBusy(null)
@@ -460,6 +463,12 @@ export function RepoView({
     const t = setTimeout(() => setDone(null), DONE_MS)
     return () => clearTimeout(t)
   }, [done])
+
+  useEffect(() => {
+    if (!failed) return
+    const t = setTimeout(() => setFailed(null), FAILED_MS)
+    return () => clearTimeout(t)
+  }, [failed])
 
   useEffect(() => {
     if (!intro || !commits.length) return
@@ -976,6 +985,7 @@ export function RepoView({
         onSearch={openSearch}
         undoInfo={undoInfo}
         done={done}
+        failed={failed}
       />
       {refs ? (
         <Sidebar

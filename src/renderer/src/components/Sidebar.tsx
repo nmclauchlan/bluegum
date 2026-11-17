@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { Branch, CommitBuild, HostInfo, PullRequest, Ref, RemoteBranch, RepoRefs, Stash, Tag } from '@shared/types'
 import { buildRefMenu, type FocusRef } from '../refMenu'
 import type { Actions } from '../actions'
@@ -164,8 +164,25 @@ export function Sidebar({
   const filtering = q.length > 0
   const total = branches.length + remotes.length + tags.length + stashes.length + shownPrs.length
 
+  const root = useRef<HTMLDivElement>(null)
+  const [tick, setTick] = useState<{ name: string; x: number; y: number; glide: boolean } | null>(null)
+  useLayoutEffect(() => {
+    const el = root.current
+    const space = el?.querySelector<HTMLElement>('.ref-item.current .tick-space')
+    const name = space?.closest<HTMLElement>('.ref-item')?.title
+    if (!el || !space || !name) {
+      setTick((t) => (t ? null : t))
+      return
+    }
+    const outer = el.getBoundingClientRect()
+    const r = space.getBoundingClientRect()
+    const x = r.left - outer.left + el.scrollLeft
+    const y = r.top - outer.top + el.scrollTop
+    setTick((t) => (t && t.name === name && t.x === x && t.y === y ? t : { name, x, y, glide: !!t && t.name !== name }))
+  })
+
   return (
-    <div className="sidebar">
+    <div className="sidebar" ref={root}>
       <div className="sidebar-search">
         <input
           ref={input}
@@ -197,6 +214,7 @@ export function Sidebar({
               onDoubleClick={() => !b.current && actions.checkout(b.name)}
               onContextMenu={(e) => branchMenu(e, b)}
             >
+              {b.current && <span className="tick-space" aria-hidden />}
               <span className="name"><Highlight text={b.name} query={q} /></span>
               {prByBranch.has(b.name) && (
                 <span
@@ -325,6 +343,9 @@ export function Sidebar({
           {stashes.length === 0 && !filtering && <div className="empty">No stashes</div>}
         </Section>
       </div>
+      {tick && (
+        <span className={`current-tick${tick.glide ? ' glide' : ''}`} aria-hidden style={{ transform: `translate(${tick.x}px, ${tick.y}px)` }} />
+      )}
     </div>
   )
 }
