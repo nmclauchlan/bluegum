@@ -6,6 +6,7 @@ import { useDialogs } from './components/Dialog'
 import { TabBar } from './components/TabBar'
 import { SettingsDialog } from './components/SettingsDialog'
 import { CloneDialog } from './components/CloneDialog'
+import { ConnectDialog, type ConnectRequest } from './components/ConnectDialog'
 import { AppVersion, UpdateNotice } from './components/UpdateNotice'
 import { Welcome } from './components/Welcome'
 import { MenuBar, type MenuDef } from './components/MenuBar'
@@ -15,7 +16,7 @@ import { AboutDialog, ShortcutsDialog } from './components/InfoDialogs'
 import { copyToClipboard, parentName, revealInFolder } from './util'
 import { BrandIcon } from './components/BrandIcon'
 import { RepoView } from './RepoView'
-import { errorMessage } from './util'
+import { errorMessage, hostName } from './util'
 import { applyTheme, currentTheme, setTheme, THEMES, useTheme, type Theme } from './themes'
 import { setPanelCollapsed, useCollapsedPanels } from './layout'
 import { collectCommands, type Command } from './commands'
@@ -86,7 +87,8 @@ export default function App(): React.JSX.Element {
   const checkingRef = useRef(false)
   const theme = useTheme()
   const collapsedPanels = useCollapsedPanels()
-  const [settingsOpen, setSettingsOpen] = useState<false | { suggestBaseUrl?: string }>(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [connectOpen, setConnectOpen] = useState<ConnectRequest | null>(null)
   const [cloneOpen, setCloneOpen] = useState<false | { group?: string }>(false)
   const [home, setHome] = useState(false)
   const [homeBusy, setHomeBusy] = useState<string | null>(null)
@@ -395,7 +397,8 @@ export default function App(): React.JSX.Element {
       prompt: dialogs.prompt,
       showError,
       showInfo,
-      openSettings: (suggestBaseUrl) => setSettingsOpen({ suggestBaseUrl }),
+      openSettings: () => setSettingsOpen(true),
+      connectAccount: (kind, baseUrl) => setConnectOpen({ kind, baseUrl }),
       openPath: (p) => void openPath(p)
     }),
     [dialogs.confirm, dialogs.choose, dialogs.prompt, openPath, showError, showInfo]
@@ -435,7 +438,7 @@ export default function App(): React.JSX.Element {
         shell.openRepo()
       } else if (e.key === ',') {
         e.preventDefault()
-        setSettingsOpen({})
+        setSettingsOpen(true)
       } else if (e.key === 'Tab' && visibleTabs.length > 1) {
         e.preventDefault()
         const idx = visibleTabs.findIndex((t) => t.path === activePath)
@@ -706,7 +709,7 @@ export default function App(): React.JSX.Element {
         { separator: true },
         { label: 'Close tab', shortcut: `${mod}W`, disabled: !activePath || (home && !tabs.length), onSelect: () => (home ? setHome(false) : activePath && closeTab(activePath)) },
         { separator: true },
-        { label: 'Settings…', shortcut: `${mod},`, onSelect: () => setSettingsOpen({}) },
+        { label: 'Settings…', shortcut: `${mod},`, onSelect: () => setSettingsOpen(true) },
         { separator: true },
         { label: 'Exit', onSelect: () => void window.native?.window('quit') }
       ]
@@ -862,13 +865,13 @@ export default function App(): React.JSX.Element {
             </span>
             {unseenCount > 0 && <span key={unseenCount} className="notif-badge">{unseenCount > 99 ? '99+' : unseenCount}</span>}
           </button>
-          <button className="icon titlebar-btn" title="Settings (Ctrl+,)" aria-label="Settings" onClick={() => setSettingsOpen({})}>
+          <button className="icon titlebar-btn" title="Settings (Ctrl+,)" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
             <Icon name="settings" />
           </button>
         </div>
         {tabs.length === 0 && recent.length === 0 && favorites.length === 0 ? (
           <>
-            <Welcome recent={recent} onOpen={shell.openRepo} onClone={() => setCloneOpen({})} onOpenRecent={openPath} />
+            <Welcome recent={recent} onOpen={shell.openRepo} onClone={() => setCloneOpen({})} onConnect={() => setConnectOpen({})} onOpenRecent={openPath} />
             <div className="statusbar">
               <span className="spacer" />
               <UpdateNotice />
@@ -950,10 +953,7 @@ export default function App(): React.JSX.Element {
           {cloneOpen && (
             <CloneDialog
               onClose={() => setCloneOpen(false)}
-              onOpenSettings={() => {
-                setCloneOpen(false)
-                setSettingsOpen({})
-              }}
+              onConnect={() => setConnectOpen({})}
               onCloned={async (dest) => {
                 const group = cloneOpen.group
                 setCloneOpen(false)
@@ -964,7 +964,21 @@ export default function App(): React.JSX.Element {
           )}
         </AnimatePresence>
         <AnimatePresence>
-          {settingsOpen && <SettingsDialog suggestBaseUrl={settingsOpen.suggestBaseUrl} onClose={() => setSettingsOpen(false)} />}
+          {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} onConnect={() => setConnectOpen({})} />}
+        </AnimatePresence>
+        <AnimatePresence>
+          {connectOpen && (
+            <ConnectDialog
+              key="connect"
+              request={connectOpen}
+              onClose={() => setConnectOpen(null)}
+              onConnected={(account) => {
+                setConnectOpen(null)
+                window.dispatchEvent(new Event('bluegum:accounts-changed'))
+                showInfo(`Connected to ${hostName(account.kind)} as ${account.user}`)
+              }}
+            />
+          )}
         </AnimatePresence>
         {dialogs.element}
         {toast && <Toast key={toast.id} toast={toast} onClose={closeToast} />}

@@ -41,7 +41,7 @@ function projectApi(info: HostInfo): string {
 async function call<T>(token: string, url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
-    headers: { 'PRIVATE-TOKEN': token, Accept: 'application/json', 'Content-Type': 'application/json', ...(init?.headers as Record<string, string> | undefined) }
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json', 'Content-Type': 'application/json', ...(init?.headers as Record<string, string> | undefined) }
   })
   if (res.status === 401) throw new Error('GitLab rejected the token (401). Check that it is valid and has the api scope.')
   if (!res.ok) {
@@ -285,7 +285,7 @@ export async function buildFailures(info: HostInfo, token: string, build: Commit
   const jobs = await pipelineAccess(call<GlFailedJob[]>(token, `${projectApi(info)}/pipelines/${build.id}/jobs?scope[]=failed&per_page=20`))
   return Promise.all(
     jobs.slice(0, 5).map(async (j) => {
-      const res = await fetch(`${projectApi(info)}/jobs/${j.id}/trace`, { headers: { 'PRIVATE-TOKEN': token } }).catch(() => null)
+      const res = await fetch(`${projectApi(info)}/jobs/${j.id}/trace`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => null)
       const tail = res?.ok ? logTail(await res.text()) : []
       const reason = j.failure_reason ? j.failure_reason.replace(/_/g, ' ') : ''
       return { step: `${j.stage}: ${j.name}`, messages: tail.length ? tail : reason ? [reason] : [], url: j.web_url }

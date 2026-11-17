@@ -178,7 +178,14 @@ Installed builds keep themselves up to date. Blue Gum checks for new versions in
 
 ## Connect your hosts
 
-Open **Settings → Accounts**, choose the service, enter its address and paste a personal access token:
+Choose **Connect to GitHub** (or Azure DevOps, or GitLab) in a repository's sidebar, **Connect an account** in Settings or the Clone dialog, or the link on the welcome screen. Pick the service and Blue Gum looks for a sign-in you already have:
+
+- **Git Credential Manager**, or any other git credential helper, which already holds a sign-in for every host you have pushed to over HTTPS. If it has none yet, **Sign in with browser** opens the host's own sign-in page, and git uses the same sign-in for push and pull.
+- **The GitHub CLI** (`gh auth login`) for GitHub, and **the Azure CLI** (`az login`) for Azure DevOps.
+
+Accounts connected this way never store a token in Blue Gum; it asks the helper or CLI each time, so signing out there signs out here too.
+
+If none of those are set up, use a personal access token. **Create a token** opens the right page with the scopes already ticked where the host allows it:
 
 | Service | Address | Token access |
 | --- | --- | --- |
@@ -191,7 +198,7 @@ Blue Gum matches each repository to an account through its `origin` remote. If a
 ## Security and privacy
 
 - **Your git, your rules.** Blue Gum runs the git executable on your machine (or the one you choose in Settings), so repository access goes through your existing credential helpers and SSH keys, and your hooks run as usual.
-- **Tokens stay protected.** Personal access tokens are encrypted with your operating system's credential store where available, and are only ever sent to the host they belong to.
+- **Tokens stay protected.** Personal access tokens are encrypted with your operating system's credential store where available. Sign-ins borrowed from Git Credential Manager or a CLI are read when needed and never saved. Either way, a token is only ever sent to the host it belongs to.
 - **No analytics.** Blue Gum contains no usage tracking. It connects only to:
   - your git remotes;
   - the hosts you connect;

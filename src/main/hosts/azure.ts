@@ -29,9 +29,11 @@ function build(org: string, project: string, repo: string, remote: string): Host
   }
 }
 
+const JWT = /^eyJ[\w-]+\.[\w-]+\.[\w-]+$/
+
 function headers(token: string): Record<string, string> {
   return {
-    Authorization: `Basic ${Buffer.from(`:${token}`).toString('base64')}`,
+    Authorization: JWT.test(token) ? `Bearer ${token}` : `Basic ${Buffer.from(`:${token}`).toString('base64')}`,
     Accept: 'application/json',
     'Content-Type': 'application/json'
   }
@@ -39,8 +41,8 @@ function headers(token: string): Record<string, string> {
 
 async function call<T>(token: string, url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, headers: { ...headers(token), ...(init?.headers as Record<string, string> | undefined) } })
-  if (res.status === 401) throw new Error('Azure DevOps rejected the token (401). Check the PAT and that it has Code (read & write) scope.')
-  if (res.status === 203) throw new Error('Azure DevOps asked for interactive sign-in; the PAT is invalid or expired.')
+  if (res.status === 401) throw new Error('Azure DevOps rejected the sign-in (401). Check that it is still valid and has Code (read & write) access.')
+  if (res.status === 203) throw new Error('Azure DevOps asked for interactive sign-in; the sign-in is invalid or expired.')
   if (!res.ok) {
     let detail = ''
     try {

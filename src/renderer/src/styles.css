@@ -570,6 +570,24 @@ textarea { resize: vertical; font-family: inherit; }
 .dialog p { margin: 0; color: var(--fg-dim); white-space: pre-wrap; user-select: text; }
 .dialog .buttons { display: flex; justify-content: flex-end; gap: 8px; }
 .choose-dialog { width: 460px; }
+.connect-dialog { width: 520px; max-height: calc(100vh - 80px); overflow: auto; }
+.connect-hosts { display: flex; gap: 6px; }
+.connect-hosts button { flex: 1; }
+.connect-hosts button.selected { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--fg); }
+.connect-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--fg-dim); }
+.connect-option { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; }
+.connect-option h4 { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-dim); }
+.connect-option summary { cursor: pointer; }
+.connect-option ol { margin: 0; padding-left: 18px; color: var(--fg-dim); display: flex; flex-direction: column; gap: 4px; }
+.connect-option p { margin: 0; }
+.connect-looking { display: flex; align-items: center; gap: 8px; }
+.connect-found { display: flex; align-items: center; gap: 12px; }
+.connect-found > span { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.connect-found small { font-size: 11px; }
+.connect-token { display: flex; gap: 8px; }
+.connect-token input { flex: 1; }
+.welcome-connect { align-self: center; margin-top: -18px; background: none; border: none; color: var(--accent); cursor: pointer; padding: 4px; }
+.welcome-connect:hover { text-decoration: underline; }
 .choose-dialog .choices { display: flex; flex-direction: column; gap: 6px; }
 .choose-dialog .choices button { text-align: left; padding: 8px 12px; }
 

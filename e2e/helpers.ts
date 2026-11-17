@@ -2,7 +2,7 @@ import { _electron as electron, expect, type ElectronApplication, type Page } fr
 import { execFileSync } from 'child_process'
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'fs'
 import { tmpdir } from 'os'
-import { dirname, join } from 'path'
+import { delimiter, dirname, join } from 'path'
 
 export const MAIN = join(__dirname, '..')
 
@@ -64,6 +64,18 @@ export function repoWithRemote(root: string, name = 'repo'): { repo: string; rem
   return { repo, remote, other }
 }
 
+function standInClis(): string {
+  const dir = tempDir('bluegum-bin-')
+  if (process.platform === 'win32') {
+    writeFileSync(join(dir, 'gh.cmd'), ['@if "%BLUEGUM_FAKE_GH_TOKEN%"=="" exit /b 1', '@echo %BLUEGUM_FAKE_GH_TOKEN%', ''].join('\r\n'))
+    writeFileSync(join(dir, 'az.cmd'), ['@exit /b 1', ''].join('\r\n'))
+  } else {
+    writeFileSync(join(dir, 'gh'), ['#!/bin/sh', '[ -n "$BLUEGUM_FAKE_GH_TOKEN" ] || exit 1', 'echo "$BLUEGUM_FAKE_GH_TOKEN"', ''].join('\n'), { mode: 0o755 })
+    writeFileSync(join(dir, 'az'), ['#!/bin/sh', 'exit 1', ''].join('\n'), { mode: 0o755 })
+  }
+  return dir
+}
+
 export interface Launched {
   app: ElectronApplication
   page: Page
@@ -71,15 +83,25 @@ export interface Launched {
   close: () => Promise<void>
 }
 
-export async function launch(repoPath?: string, userData = tempDir('bluegum-profile-')): Promise<Launched> {
+export async function launch(repoPath?: string, userData = tempDir('bluegum-profile-'), extraEnv: Record<string, string> = {}): Promise<Launched> {
   const args = [MAIN]
   if (process.platform === 'linux') args.push('--no-sandbox')
   if (repoPath) args.push(repoPath)
   const scratch = process.env.BLUEGUM_E2E_TMP
-  const app = await electron.launch({
-    args,
-    env: { ...process.env, ...(scratch && { TMP: scratch, TEMP: scratch, TMPDIR: scratch }), BLUEGUM_USER_DATA: userData, NODE_ENV: 'production' } as Record<string, string>
-  })
+  const env: Record<string, string | undefined> = {
+    ...process.env,
+    ...(scratch && { TMP: scratch, TEMP: scratch, TMPDIR: scratch }),
+    BLUEGUM_USER_DATA: userData,
+    NODE_ENV: 'production',
+    GH_CONFIG_DIR: tempDir('bluegum-gh-'),
+    AZURE_CONFIG_DIR: tempDir('bluegum-az-'),
+    ...extraEnv
+  }
+  delete env.GH_TOKEN
+  delete env.GITHUB_TOKEN
+  const pathKey = Object.keys(env).find((k) => k.toUpperCase() === 'PATH') ?? 'PATH'
+  env[pathKey] = [standInClis(), env[pathKey]].filter(Boolean).join(delimiter)
+  const app = await electron.launch({ args, env: env as Record<string, string> })
   const page = await app.firstWindow()
   await page.waitForSelector('.app')
   if (repoPath) await expect(page.locator('.repo-view:not([hidden]) .commit-row').first()).toBeVisible({ timeout: 20_000 })

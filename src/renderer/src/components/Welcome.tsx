@@ -6,11 +6,13 @@ export function Welcome({
   recent,
   onOpen,
   onClone,
+  onConnect,
   onOpenRecent
 }: {
   recent: RepoInfo[]
   onOpen: () => void
   onClone: () => void
+  onConnect: () => void
   onOpenRecent: (path: string) => void
 }): React.JSX.Element {
   const modifier = /Mac/.test(navigator.platform) ? '⌘' : 'Ctrl'
@@ -39,6 +41,9 @@ export function Welcome({
             Clone repository…
           </button>
         </div>
+        <button className="link welcome-connect" onClick={onConnect}>
+          Connect GitHub, Azure DevOps or GitLab to see pull requests and builds
+        </button>
         {recent.length > 0 && (
           <section className="recent" aria-labelledby="recent-heading">
             <h2 id="recent-heading">Recent repositories</h2>

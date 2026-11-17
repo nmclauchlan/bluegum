@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useIsPresent } from 'motion/react'
 import { Overlay } from './Overlay'
-import type { HostAccount, HostKind, PullMode } from '@shared/types'
+import type { CredentialSource, HostAccount, PullMode } from '@shared/types'
 import { hostName } from '../util'
 import { setFileView, useFileView } from '../fileView'
 import { PULL_LABELS, SETTINGS_DEFAULTS, SETTINGS_LIMITS, setSettings, useSettings } from '../settings'
@@ -10,36 +10,24 @@ import { errorMessage } from '../util'
 import { UpdateNotice } from './UpdateNotice'
 import { Icon } from './Icon'
 
-function Accounts({ suggestBaseUrl }: { suggestBaseUrl?: string }): React.JSX.Element {
+const VIA: Record<CredentialSource, string> = {
+  token: 'personal access token',
+  git: 'Git credential helper',
+  gh: 'GitHub CLI',
+  az: 'Azure CLI'
+}
+
+function Accounts({ onConnect }: { onConnect: () => void }): React.JSX.Element {
   const [accounts, setAccounts] = useState<HostAccount[]>([])
-  const [kind, setKind] = useState<HostKind>(
-    !suggestBaseUrl || /dev\.azure\.com|visualstudio\.com/i.test(suggestBaseUrl) ? 'azure' : /gitlab/i.test(suggestBaseUrl) ? 'gitlab' : 'github'
-  )
-  const [baseUrl, setBaseUrl] = useState(suggestBaseUrl ?? 'https://dev.azure.com/')
-  const [token, setToken] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [note, setNote] = useState<{ text: string; error: boolean } | null>(null)
 
   const reload = useCallback(() => {
     window.host.accounts().then(setAccounts).catch(() => undefined)
   }, [])
-  useEffect(reload, [reload])
-
-  const connect = async (): Promise<void> => {
-    setBusy(true)
-    setNote(null)
-    try {
-      const acc = await window.host.addAccount(kind, baseUrl, token)
-      window.dispatchEvent(new Event('bluegum:accounts-changed'))
-      setNote({ text: `Connected as ${acc.user}${acc.encrypted ? '' : ' (token stored without OS encryption)'}`, error: false })
-      setToken('')
-      reload()
-    } catch (e) {
-      setNote({ text: errorMessage(e), error: true })
-    } finally {
-      setBusy(false)
-    }
-  }
+  useEffect(() => {
+    reload()
+    window.addEventListener('bluegum:accounts-changed', reload)
+    return () => window.removeEventListener('bluegum:accounts-changed', reload)
+  }, [reload])
 
   return (
     <section className="settings-section">
@@ -49,7 +37,10 @@ function Accounts({ suggestBaseUrl }: { suggestBaseUrl?: string }): React.JSX.El
         <div key={a.kind + a.baseUrl} className="settings-row account-row">
           <span>
             {hostName(a.kind)}
-            <small>{a.baseUrl} · {a.user}</small>
+            <small>
+              {a.baseUrl} · {a.user} · {VIA[a.source]}
+              {a.source === 'token' && !a.encrypted ? ' (stored without OS encryption)' : ''}
+            </small>
           </span>
           <button
             className="danger"
@@ -64,64 +55,16 @@ function Accounts({ suggestBaseUrl }: { suggestBaseUrl?: string }): React.JSX.El
           </button>
         </div>
       ))}
-      <div className="settings-row column">
-        <span className="unit">
-          <select
-            value={kind}
-            onChange={(e) => {
-              const k = e.target.value as HostKind
-              setKind(k)
-              setBaseUrl(k === 'github' ? 'https://github.com' : k === 'gitlab' ? 'https://gitlab.com' : 'https://dev.azure.com/')
-              setNote(null)
-            }}
-          >
-            <option value="azure">Azure DevOps</option>
-            <option value="github">GitHub</option>
-            <option value="gitlab">GitLab</option>
-          </select>
-          <small className="muted">
-            {kind === 'azure'
-              ? 'Personal access token with Code (read & write) and Build (read) scopes, from Organisation settings → Personal access tokens'
-              : kind === 'gitlab'
-                ? 'Personal access token with the api scope, from Preferences → Access tokens'
-                : 'Personal access token with repository, pull-request, checks and commit-status access, from Settings → Developer settings → Tokens'}
-          </small>
-        </span>
-        <span className="unit grow">
-          <input
-            value={baseUrl}
-            spellCheck={false}
-            placeholder={
-              kind === 'github'
-                ? 'https://github.com or https://github.my-company.com'
-                : kind === 'gitlab'
-                  ? 'https://gitlab.com or https://gitlab.my-company.com'
-                  : 'https://dev.azure.com/my-org'
-            }
-            onChange={(e) => setBaseUrl(e.target.value)}
-          />
-        </span>
-        <span className="unit grow">
-          <input
-            type="password"
-            value={token}
-            placeholder="Personal access token"
-            onChange={(e) => setToken(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') void connect()
-            }}
-          />
-          <button className="primary" aria-busy={busy} disabled={busy || !token.trim() || !baseUrl.trim()} onClick={() => void connect()}>
-            {busy ? 'Connecting…' : 'Connect'}
-          </button>
-        </span>
+      <div className="settings-row">
+        <button className="primary" onClick={onConnect}>
+          Connect an account…
+        </button>
       </div>
-      {note && <div className={`settings-note${note.error ? ' error' : ''}`}>{note.text}</div>}
     </section>
   )
 }
 
-export function SettingsDialog({ onClose, suggestBaseUrl }: { onClose: () => void; suggestBaseUrl?: string }): React.JSX.Element {
+export function SettingsDialog({ onClose, onConnect }: { onClose: () => void; onConnect: () => void }): React.JSX.Element {
   const settings = useSettings()
   const theme = useTheme()
   const fileView = useFileView()
@@ -298,7 +241,7 @@ export function SettingsDialog({ onClose, suggestBaseUrl }: { onClose: () => voi
           {gitTest && <div className={`settings-note${gitTest.startsWith('Error') ? ' error' : ''}`}>{gitTest}</div>}
         </section>
 
-        <Accounts suggestBaseUrl={suggestBaseUrl} />
+        <Accounts onConnect={onConnect} />
 
         <section className="settings-section">
           <h4>Updates</h4>

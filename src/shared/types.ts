@@ -359,11 +359,25 @@ export interface HostInfo {
   remote: string
 }
 
+export type ExternalSource = 'git' | 'gh' | 'az'
+export type CredentialSource = 'token' | ExternalSource
+
 export interface HostAccount {
   kind: HostKind
   baseUrl: string
   user: string
   encrypted: boolean
+  source: CredentialSource
+}
+
+export interface SignInOption {
+  source: ExternalSource
+  user: string
+}
+
+export interface SignInOptions {
+  found: SignInOption[]
+  browser: boolean
 }
 
 export interface PullRequestReviewer {
@@ -435,6 +449,9 @@ export interface HostApi {
   accounts(): Promise<HostAccount[]>
   hasAccount(repoPath: string): Promise<boolean>
   addAccount(kind: HostKind, baseUrl: string, token: string): Promise<HostAccount>
+  signInOptions(kind: HostKind, baseUrl: string): Promise<SignInOptions>
+  connectSignIn(kind: HostKind, baseUrl: string, source: ExternalSource): Promise<HostAccount>
+  browserSignIn(kind: HostKind, baseUrl: string): Promise<HostAccount>
   removeAccount(kind: HostKind, baseUrl: string): Promise<void>
   pullRequests(repoPath: string): Promise<PullRequest[]>
   pullRequest(repoPath: string, id: number): Promise<PullRequestDetails>

@@ -1,4 +1,4 @@
-import type { IgnoreKind, MergeMode, PullMode, RebaseAction } from '@shared/types'
+import type { HostKind, IgnoreKind, MergeMode, PullMode, RebaseAction } from '@shared/types'
 import type { MenuItem } from './components/ContextMenu'
 import type { CompareRequest } from './components/CompareView'
 import type { Choice } from './components/Dialog'
@@ -11,7 +11,8 @@ export interface Shell {
   prompt(title: string, label: string, defaultValue?: string): Promise<string | null>
   showError(message: string, title?: string): void
   showInfo(message: string): void
-  openSettings(suggestBaseUrl?: string): void
+  openSettings(): void
+  connectAccount(kind?: HostKind, baseUrl?: string): void
   openPath(path: string): void
 }
 

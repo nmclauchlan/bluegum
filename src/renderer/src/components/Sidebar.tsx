@@ -242,7 +242,7 @@ export function Sidebar({
           <Section title={host.kind === 'gitlab' ? 'Merge requests' : 'Pull requests'} count={hasAccount ? shownPrs.length : 0} forceOpen={filtering}>
             {!hasAccount ? (
               <div className="connect-row">
-                <button onClick={() => actions.openSettings(host.baseUrl)}>Connect to {hostName(host.kind)}</button>
+                <button onClick={() => actions.connectAccount(host.kind, host.baseUrl)}>Connect to {hostName(host.kind)}</button>
                 <small className="muted">{hostPath(host)}</small>
               </div>
             ) : (

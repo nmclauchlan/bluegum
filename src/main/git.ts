@@ -15,12 +15,12 @@ const FIELD = '\x1f'
 const RECORD = '\x1e'
 const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
 
-function binary(): string {
+export function gitBinary(): string {
   return getSettings().gitPath.trim() || 'git'
 }
 
 function git(path: string): SimpleGit {
-  return simpleGit({ baseDir: path, binary: binary(), maxConcurrentProcesses: 4 })
+  return simpleGit({ baseDir: path, binary: gitBinary(), maxConcurrentProcesses: 4 })
 }
 
 const GUARDED_NON_GIT = new Set(['EDITOR', 'VISUAL', 'PAGER', 'PREFIX', 'SSH_ASKPASS'])
@@ -36,7 +36,7 @@ export function gitWithEnv(extra: Record<string, string>, baseDir?: string, bloc
   Object.assign(env, extra)
   return simpleGit({
     ...(baseDir ? { baseDir } : {}),
-    binary: binary(),
+    binary: gitBinary(),
     allowEnvironment: Object.keys(extra),
     ...(blockTimeoutMs ? { timeout: { block: blockTimeoutMs } } : {}),
     unsafe: { allowUnsafeEditor: true, allowUnsafeConfigEnvCount: true }
@@ -44,11 +44,11 @@ export function gitWithEnv(extra: Record<string, string>, baseDir?: string, bloc
 }
 
 export async function gitVersion(): Promise<string> {
-  return simpleGit({ binary: binary() }).raw(['--version'])
+  return simpleGit({ binary: gitBinary() }).raw(['--version'])
 }
 
 export async function clone(url: string, dest: string): Promise<string> {
-  await simpleGit({ binary: binary() }).clone(url, dest)
+  await simpleGit({ binary: gitBinary() }).clone(url, dest)
   return dest
 }
 
@@ -817,7 +817,7 @@ export async function repoSummary(path: string, withChanges: boolean): Promise<R
 }
 
 export async function initRepo(path: string): Promise<void> {
-  await simpleGit({ baseDir: path, binary: binary() }).raw(['init'])
+  await simpleGit({ baseDir: path, binary: gitBinary() }).raw(['init'])
 }
 
 async function upstreamOf(path: string, branch: string): Promise<{ remote: string; ref: string } | null> {

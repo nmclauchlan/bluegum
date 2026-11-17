@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useIsPresent } from 'motion/react'
 import { Overlay } from './Overlay'
 import { Loading } from './Spinner'
@@ -35,11 +35,11 @@ type Source = { kind: 'url' } | { kind: 'account'; account: HostAccount }
 export function CloneDialog({
   onClose,
   onCloned,
-  onOpenSettings
+  onConnect
 }: {
   onClose: () => void
   onCloned: (dest: string) => void
-  onOpenSettings: () => void
+  onConnect: () => void
 }): React.JSX.Element {
   const [accounts, setAccounts] = useState<HostAccount[] | null>(null)
   const [source, setSource] = useState<Source>({ kind: 'url' })
@@ -54,14 +54,23 @@ export function CloneDialog({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const known = useRef<HostAccount[] | null>(null)
   useEffect(() => {
-    window.host
-      .accounts()
-      .then((list) => {
-        setAccounts(list)
-        if (list.length) setSource({ kind: 'account', account: list[0] })
-      })
-      .catch(() => setAccounts([]))
+    const load = (): void => {
+      window.host
+        .accounts()
+        .then((list) => {
+          const before = known.current
+          known.current = list
+          setAccounts(list)
+          const added = before ? list.find((a) => !before.some((b) => b.kind === a.kind && b.baseUrl === a.baseUrl)) : list[0]
+          if (added) setSource({ kind: 'account', account: added })
+        })
+        .catch(() => setAccounts((before) => before ?? []))
+    }
+    load()
+    window.addEventListener('bluegum:accounts-changed', load)
+    return () => window.removeEventListener('bluegum:accounts-changed', load)
   }, [])
 
   const accountKey = source.kind === 'account' ? source.account.kind + source.account.baseUrl : ''
@@ -224,7 +233,7 @@ export function CloneDialog({
         {accounts !== null && accounts.length === 0 && source.kind === 'url' && (
           <div className="muted" style={{ fontSize: 12 }}>
             Connect a GitHub, GitLab or Azure DevOps account to pick from your repositories.{' '}
-            <a href="#" onClick={(e) => { e.preventDefault(); onOpenSettings() }}>Open Settings</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); onConnect() }}>Connect an account</a>
           </div>
         )}
 
