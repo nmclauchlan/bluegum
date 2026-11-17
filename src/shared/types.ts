@@ -78,6 +78,12 @@ export interface GoneUpstream {
   merged: boolean
 }
 
+export type UpstreamState =
+  | { kind: 'detached' }
+  | ({ kind: 'gone'; branch: string } & GoneUpstream)
+  | { kind: 'untracked'; branch: string; remoteBranch: string }
+  | { kind: 'unpublished'; branch: string }
+
 export interface RemoteBranch {
   remote: string
   name: string
@@ -226,6 +232,7 @@ export interface GitApi {
   setUpstream(path: string, branch: string, upstream: string): Promise<void>
   unsetUpstream(path: string, branch: string): Promise<void>
   goneUpstream(path: string, branch: string, refetch?: boolean): Promise<GoneUpstream>
+  upstreamState(path: string): Promise<UpstreamState>
   fastForward(path: string, target: string): Promise<void>
   rebase(path: string, onto: string): Promise<void>
   rebaseCommits(path: string, base: string): Promise<RebaseCommit[]>

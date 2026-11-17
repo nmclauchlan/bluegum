@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence } from 'motion/react'
 import type { Commit, CommitBuild, CommitSearchMode, GoneUpstream, GraphFilter, RebaseAction, RebaseStep, HostInfo, PullRequest, RepoInfo, RepoRefs, RepoStatus, UndoInfo } from '@shared/types'
 import { CreatePrDialog } from './components/CreatePrDialog'
+import { retireBranch } from './upstream'
 import { Loading } from './components/Spinner'
 import { buildRefMenu, type FocusRef } from './refMenu'
 import { PrPanel } from './components/PrPanel'
@@ -518,15 +519,7 @@ export function RepoView({
       { id: 'untrack', label: `Keep ${branch} local and stop tracking it` }
     ])
     if (choice === 'retire' && base) {
-      void run(
-        'Switching',
-        async () => {
-          await window.git.checkout(path, base)
-          await window.git.fastForward(path, `${remote}/${base}`).catch(() => undefined)
-          await window.git.deleteBranch(path, branch, true)
-        },
-        `Switched to ${base} and deleted ${branch}`
-      )
+      void run('Switching', () => retireBranch(path, branch, base, remote), `Switched to ${base} and deleted ${branch}`)
     } else if (choice === 'push') void run('Pushing', () => window.git.pushBranch(path, branch), `Pushed ${branch} to ${upstream}`)
     else if (choice === 'untrack') void run('Updating', () => window.git.unsetUpstream(path, branch), `${branch} no longer tracks ${upstream}`)
   }

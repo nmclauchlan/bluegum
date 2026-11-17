@@ -8,7 +8,7 @@ import {
   type CompareCommit, type CompareMode, type CompareSummary, type StashOptions, type PullMode, type MergeMode, type IgnoreKind,
   imageMime,
   type Commit, type CommitDetails, type FileChange, type ImageDiffResult, type ImageSource,
-  type OperationState, type IncomingUpstream, type GoneUpstream, type Ref, type RepoSummary, type GraphFilter, type RepoInfo, type RepoRefs, type RepoStatus, type StatusFile
+  type OperationState, type IncomingUpstream, type GoneUpstream, type UpstreamState, type Ref, type RepoSummary, type GraphFilter, type RepoInfo, type RepoRefs, type RepoStatus, type StatusFile
 } from '@shared/types'
 
 const FIELD = '\x1f'
@@ -862,6 +862,17 @@ async function landedIn(path: string, branch: string, target: string): Promise<b
     await g.raw(['-c', 'user.name=Blue Gum', '-c', 'user.email=bluegum@localhost', 'commit-tree', `${tip}^{tree}`, '-p', base, '-m', 'squash check'])
   ).trim()
   return (await g.raw(['cherry', target, squashed])).trim().startsWith('-')
+}
+
+export async function upstreamState(path: string): Promise<UpstreamState> {
+  const g = git(path)
+  const branch = (await g.raw(['symbolic-ref', '--quiet', '--short', 'HEAD']).catch(() => '')).trim()
+  if (!branch) return { kind: 'detached' }
+  if (await upstreamOf(path, branch)) return { kind: 'gone', branch, ...(await goneUpstream(path, branch, false)) }
+  const remotes = (await g.getRemotes()).map((r) => r.name)
+  const remote = remotes.includes('origin') ? 'origin' : remotes[0]
+  const same = remote ? (await g.raw(['for-each-ref', '--format=%(refname)', `refs/remotes/${remote}/${branch}`])).trim() : ''
+  return same ? { kind: 'untracked', branch, remoteBranch: `${remote}/${branch}` } : { kind: 'unpublished', branch }
 }
 
 export async function goneUpstream(path: string, branch: string, refetch = true): Promise<GoneUpstream> {

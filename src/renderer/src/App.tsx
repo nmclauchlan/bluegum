@@ -17,6 +17,7 @@ import { copyToClipboard, parentName, revealInFolder } from './util'
 import { BrandIcon } from './components/BrandIcon'
 import { RepoView } from './RepoView'
 import { errorMessage, hostName } from './util'
+import { retireBranch } from './upstream'
 import { applyTheme, currentTheme, setTheme, THEMES, useTheme, type Theme } from './themes'
 import { setPanelCollapsed, useCollapsedPanels } from './layout'
 import { collectCommands, type Command } from './commands'
@@ -39,6 +40,15 @@ interface ClearUndo {
 }
 
 const NO_UNDO: ClearUndo = { baselines: {}, builds: [] }
+const NO_UPSTREAM = /no tracking information|no such ref was fetched|couldn't find remote ref/i
+
+interface Merged {
+  path: string
+  name: string
+  branch: string
+  base: string
+  remote: string
+}
 
 function loadShaMap(key: string): Record<string, string> {
   try {
@@ -534,6 +544,10 @@ export default function App(): React.JSX.Element {
     onProgress?.(done, total)
     const updated: string[] = []
     const current: string[] = []
+    const merged: Merged[] = []
+    const deleted: string[] = []
+    const unpublished: string[] = []
+    const untracked: string[] = []
     const failed: { name: string; reason: string }[] = []
     const queue = [...entries]
     const worker = async (): Promise<void> => {
@@ -543,11 +557,18 @@ export default function App(): React.JSX.Element {
           ;(result === 'updated' ? updated : current).push(t.name)
         } catch (e) {
           const msg = errorMessage(e)
+          if (NO_UPSTREAM.test(msg)) {
+            const state = await window.git.upstreamState(t.path).catch(() => null)
+            if (state?.kind === 'gone' && state.merged && state.base) merged.push({ ...t, branch: state.branch, base: state.base, remote: state.remote })
+            else if (state?.kind === 'gone') deleted.push(`${t.name} (${state.branch})`)
+            else if (state?.kind === 'unpublished') unpublished.push(`${t.name} (${state.branch})`)
+            else if (state?.kind === 'untracked') untracked.push(`${t.name} (${state.remoteBranch})`)
+            else failed.push({ name: t.name, reason: 'not on a branch' })
+            continue
+          }
           const reason = /not possible to fast-forward|diverg/i.test(msg)
             ? 'branch has diverged; pull it on its own to merge or rebase'
-            : /no tracking information|no such ref was fetched/i.test(msg)
-              ? 'no upstream branch'
-              : /would be overwritten|local changes/i.test(msg)
+            : /would be overwritten|local changes/i.test(msg)
                 ? 'local changes would be overwritten'
                 : /not a git repository|does not exist|cannot use simple-git/i.test(msg)
                   ? 'repository not found'
@@ -564,12 +585,46 @@ export default function App(): React.JSX.Element {
     const parts: string[] = []
     if (updated.length) parts.push(`Updated ${updated.length}: ${updated.join(', ')}`)
     if (current.length) parts.push(`Already up to date: ${current.length}`)
+    if (merged.length) parts.push(`Merged and deleted on the remote: ${merged.map((m) => `${m.name} (${m.branch})`).join(', ')}`)
+    if (deleted.length) parts.push(`Deleted on the remote with work not yet merged: ${deleted.join(', ')}`)
+    if (unpublished.length) parts.push(`Not published yet: ${unpublished.join(', ')}`)
+    if (untracked.length) parts.push(`Not tracking their remote branch (set it from the branch menu): ${untracked.join(', ')}`)
     if (failed.length) {
-      showError(
-        [`Pulled ${label}: ${total - failed.length} of ${total} succeeded`, ...parts, '', ...failed.map((x) => `${x.name}: ${x.reason}`)].join('\n')
-      )
+      showError([`Pulled ${label}: ${failed.length} failed`, ...parts, '', ...failed.map((x) => `${x.name}: ${x.reason}`)].join('\n'))
     } else {
       showInfo([`Pulled ${label}`, ...parts].join('\n'))
+    }
+    if (merged.length) await offerRetire(merged)
+  }
+
+  const offerRetire = async (list: Merged[]): Promise<void> => {
+    const one = list.length === 1 ? list[0] : null
+    const choice = await dialogs.choose(
+      one ? `${one.branch} was merged and deleted` : `${list.length} branches were merged and deleted`,
+      one
+        ? `In ${one.name}, ${one.branch} no longer exists on ${one.remote} and everything on it is already in ${one.base}.`
+        : `These branches no longer exist on their remote, and everything on them is already in the main branch:\n\n${list.map((m) => `${m.name}: ${m.branch} → ${m.base}`).join('\n')}`,
+      [{ id: 'retire', label: one ? `Switch to ${one.base} and delete ${one.branch}` : 'Switch each to its main branch and delete the merged branches', primary: true }]
+    )
+    if (choice !== 'retire') return
+    const done: string[] = []
+    const failed: string[] = []
+    await Promise.all(
+      list.map(async (m) => {
+        try {
+          await retireBranch(m.path, m.branch, m.base, m.remote)
+          done.push(m.name)
+        } catch (e) {
+          failed.push(`${m.name}: ${errorMessage(e).split('\n').find((l) => l.trim()) ?? ''}`)
+        } finally {
+          window.dispatchEvent(new CustomEvent('bluegum:synced', { detail: m.path }))
+        }
+      })
+    )
+    if (failed.length) {
+      showError([one ? `Couldn't tidy up ${one.name}` : `Tidied up ${done.length} of ${list.length} repositories`, '', ...failed].join('\n'))
+    } else {
+      showInfo(one ? `Switched ${one.name} to ${one.base} and deleted ${one.branch}` : `Switched ${list.length} repositories to their main branch and deleted the merged branches`)
     }
   }
 
