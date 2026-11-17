@@ -132,7 +132,7 @@ test('self-hosted GitHub Enterprise and GitLab remotes are recognised before any
     await v.getByRole('button', { name: 'Connect to GitHub' }).click()
     await expect(dialog.getByRole('radio', { name: 'GitHub' })).toHaveAttribute('aria-checked', 'true')
     await expect(dialog.getByRole('textbox', { name: 'Server' })).toHaveValue('https://git.acme.test')
-    await dialog.locator('summary', { hasText: 'Use a personal access token' }).click()
+    await expect(dialog).toContainText('No sign-in for GitHub found on this computer', { timeout: 20_000 })
     await expect(dialog.getByRole('link', { name: 'Create a token on GitHub' })).toHaveAttribute(
       'href',
       'https://git.acme.test/settings/tokens/new?scopes=repo,read:org&description=Blue%20Gum'
