@@ -1014,7 +1014,10 @@ button[aria-busy='true']::before { margin-right: 6px; vertical-align: -1px; }
 .notifications-body { overflow: auto; padding: 4px 0; }
 .notifications-empty { display: flex; align-items: center; gap: 8px; padding: 18px 14px; color: var(--fg-dim); font-size: 12px; }
 .notifications-branch { padding: 6px 12px 8px; border-bottom: 1px solid var(--border); }
-.notifications-branch:last-child { border-bottom: none; }
+.notifications-item { overflow: hidden; }
+.notifications-item:last-child > .notifications-branch { border-bottom: none; }
+.notifications-panel { transform-origin: top right; }
+.notifications-empty.after-clear { animation: fade-enter var(--motion-normal) 160ms var(--ease-out) both; }
 .notifications-branch.unseen { background: color-mix(in srgb, var(--accent) 7%, transparent); }
 .notifications-branch-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 12px; min-width: 0; }
 .notifications-branch-head .repo-name { font-weight: 600; }

@@ -295,3 +295,82 @@ test('a push rolls its count down to zero with the arrow nudging, and a failed f
     await close()
   }
 })
+
+test('cleared notifications slide out, clear all staggers them, and the panel fades when it closes', async () => {
+  test.slow()
+  const { repo, other } = repoWithRemote(tempDir())
+  git(repo, 'checkout', '-q', '-b', 'develop')
+  commit(repo, 'd.txt', 'd\n', 'Develop start')
+  git(repo, 'push', '-q', '-u', 'origin', 'develop')
+  git(repo, 'checkout', '-q', 'main')
+  const { page, close } = await launch(repo)
+  try {
+    await page.evaluate(() => localStorage.setItem('bluegum.settings', JSON.stringify({ backgroundFetch: 0 })))
+    await page.reload()
+    await expect(view(page).locator('.commit-row').first()).toBeVisible()
+    const panel = page.locator('.notifications-panel')
+    const entries = panel.locator('.notifications-branch')
+    await page.getByRole('button', { name: /^Notifications/ }).click()
+    await panel.getByRole('button', { name: 'Check now' }).click()
+    await expect
+      .poll(() => page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('bluegum.incomingBaselines') ?? '{}')).length), { timeout: 20_000 })
+      .toBe(2)
+
+    git(other, 'fetch', '-q', 'origin')
+    git(other, 'checkout', '-q', 'develop')
+    commit(other, 'd2.txt', 'd2\n', 'Remote develop change')
+    git(other, 'push', '-q', 'origin', 'develop')
+    git(other, 'checkout', '-q', 'main')
+    commit(other, 'm.txt', 'm\n', 'Remote main change')
+    git(other, 'push', '-q', 'origin', 'main')
+    await panel.getByRole('button', { name: 'Check now' }).click()
+    await expect(entries).toHaveCount(2, { timeout: 20_000 })
+
+    await page.evaluate(() => {
+      const w = window as unknown as { removed: { at: number; opacity: string }[]; closing: number }
+      w.removed = []
+      w.closing = 0
+      new MutationObserver((records) => {
+        for (const r of records) {
+          if (r.type === 'attributes' && (r.target as Element).matches('.notifications-panel[data-closing]')) w.closing++
+          for (const n of r.removedNodes) if (n instanceof HTMLElement && n.matches('.notifications-item')) w.removed.push({ at: performance.now(), opacity: n.style.opacity })
+        }
+      }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-closing'] })
+    })
+    const record = (): Promise<{ removed: { at: number; opacity: string }[]; closing: number }> =>
+      page.evaluate(() => {
+        const w = window as unknown as { removed: { at: number; opacity: string }[]; closing: number }
+        return { removed: w.removed, closing: w.closing }
+      })
+
+    await panel.getByRole('button', { name: 'Clear origin/develop', exact: true }).click()
+    await expect(entries).toHaveCount(1)
+    expect((await record()).removed.map((r) => r.opacity)).toEqual(['0'])
+    await panel.getByRole('button', { name: 'Undo', exact: true }).click()
+    await expect(entries).toHaveCount(2)
+
+    await page.evaluate(() => {
+      const w = window as unknown as { samples: number[][] }
+      w.samples = []
+      const sample = (): void => {
+        const items = [...document.querySelectorAll<HTMLElement>('.notifications-item')]
+        if (!items.length) return
+        w.samples.push(items.map((i) => parseFloat(getComputedStyle(i).opacity)))
+        requestAnimationFrame(sample)
+      }
+      requestAnimationFrame(sample)
+    })
+    await panel.getByRole('button', { name: 'Clear all', exact: true }).click()
+    await expect(entries).toHaveCount(0)
+    await expect(panel.locator('.notifications-empty')).toContainText('Nothing new since you cleared them')
+    expect((await record()).removed.slice(1).map((r) => r.opacity)).toEqual(['0', '0'])
+    const samples = await page.evaluate(() => (window as unknown as { samples: number[][] }).samples)
+    expect(samples.some(([first, second]) => first < second - 0.05)).toBe(true)
+
+    await page.keyboard.press('Escape')
+    await expect(panel).toHaveCount(0)
+    expect((await record()).closing).toBe(1)
+  } finally {
+    await close()
+  }
+})

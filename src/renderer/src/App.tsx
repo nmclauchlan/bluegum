@@ -916,32 +916,35 @@ export default function App(): React.JSX.Element {
           {switcherOpen && <RepoSwitcher key="switcher" entries={switcherEntries()} onPick={pickRepo} onClose={() => setSwitcherOpen(false)} />}
           {paletteOpen && <CommandPalette key="palette" commands={paletteCommands()} onClose={() => setPaletteOpen(false)} />}
         </AnimatePresence>
-        {notifOpen && (
-          <NotificationsPanel
-            repos={incomingList}
-            unseenKeys={notifOpen}
-            checking={checking}
-            lastChecked={lastChecked}
-            pulling={pullingRepo}
-            cleared={Object.keys(clearUndo.baselines).length + clearUndo.builds.length}
-            onOpenCommit={(path, hash) => {
-              closeNotifications()
-              setActivePath(path)
-              setHome(false)
-              setFocus((f) => ({ path, hash, n: (f?.n ?? 0) + 1 }))
-            }}
-            onPull={(path) => void pullIncoming(path)}
-            onCheckNow={() => void checkIncoming(true)}
-            onClear={(path, branch) => clearIncoming(path, branch)}
-            onClearAll={() => {
-              clearIncoming(null, null)
-              clearBuilds(incomingList.flatMap((r) => r.failedBuilds.map((f) => failedBuildKey(r.path, f))))
-            }}
-            onClearBuild={(key) => clearBuilds([key])}
-            onUndo={undoClear}
-            onClose={closeNotifications}
-          />
-        )}
+        <AnimatePresence>
+          {notifOpen && (
+            <NotificationsPanel
+              key="notifications"
+              repos={incomingList}
+              unseenKeys={notifOpen}
+              checking={checking}
+              lastChecked={lastChecked}
+              pulling={pullingRepo}
+              cleared={Object.keys(clearUndo.baselines).length + clearUndo.builds.length}
+              onOpenCommit={(path, hash) => {
+                closeNotifications()
+                setActivePath(path)
+                setHome(false)
+                setFocus((f) => ({ path, hash, n: (f?.n ?? 0) + 1 }))
+              }}
+              onPull={(path) => void pullIncoming(path)}
+              onCheckNow={() => void checkIncoming(true)}
+              onClear={(path, branch) => clearIncoming(path, branch)}
+              onClearAll={() => {
+                clearIncoming(null, null)
+                clearBuilds(incomingList.flatMap((r) => r.failedBuilds.map((f) => failedBuildKey(r.path, f))))
+              }}
+              onClearBuild={(key) => clearBuilds([key])}
+              onUndo={undoClear}
+              onClose={closeNotifications}
+            />
+          )}
+        </AnimatePresence>
         <ContextMenu menu={menu} onClose={closeMenu} />
         <AnimatePresence>
           {cloneOpen && (
