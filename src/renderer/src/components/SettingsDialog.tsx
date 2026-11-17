@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useIsPresent } from 'motion/react'
+import { Overlay } from './Overlay'
 import type { HostAccount, HostKind, PullMode } from '@shared/types'
 import { hostName } from '../util'
 import { setFileView, useFileView } from '../fileView'
@@ -132,13 +134,15 @@ export function SettingsDialog({ onClose, suggestBaseUrl }: { onClose: () => voi
     window.native?.version().then(setVersion).catch(() => undefined)
   }, [])
 
+  const present = useIsPresent()
   useEffect(() => {
+    if (!present) return
     const key = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)
-  }, [onClose])
+  }, [onClose, present])
 
   const applyGitPath = async (): Promise<void> => {
     const trimmed = gitPath.trim()
@@ -156,7 +160,7 @@ export function SettingsDialog({ onClose, suggestBaseUrl }: { onClose: () => voi
   }
 
   return (
-    <div className="overlay" onMouseDown={onClose}>
+    <Overlay onDismiss={onClose}>
       <div className="dialog settings-dialog" onMouseDown={(e) => e.stopPropagation()}>
         <div className="settings-head">
           <h3>Settings</h3>
@@ -330,6 +334,6 @@ export function SettingsDialog({ onClose, suggestBaseUrl }: { onClose: () => voi
           <button className="primary" onClick={onClose}>Done</button>
         </div>
       </div>
-    </div>
+    </Overlay>
   )
 }

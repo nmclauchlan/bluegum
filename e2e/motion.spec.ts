@@ -132,3 +132,39 @@ test('a new theme spreads out from where it was picked, and appears instantly wi
     await close()
   }
 })
+
+test('dialogs fade out when they close and hand focus back to what opened them', async () => {
+  const repo = initRepo(tempDir())
+  commit(repo, 'a.txt', 'a\n', 'Initial')
+  write(repo, 'a.txt', 'changed\n')
+  const { page, close } = await launch(repo)
+  try {
+    await page.evaluate(() => {
+      const w = window as unknown as { closing: string[] }
+      w.closing = []
+      new MutationObserver((records) => {
+        for (const r of records) {
+          const el = r.target as HTMLElement
+          if (el.matches('.overlay[data-closing]')) w.closing.push(el.querySelector('.dialog')?.classList[1] ?? 'dialog')
+        }
+      }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['data-closing'] })
+    })
+    const closing = (): Promise<string[]> => page.evaluate(() => (window as unknown as { closing: string[] }).closing)
+
+    await page.keyboard.press('Control+,')
+    await expect(page.locator('.settings-dialog')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.overlay')).toHaveCount(0)
+
+    const stash = view(page).locator('.toolbar').getByRole('button', { name: /Stash/ })
+    await stash.click()
+    await expect(page.getByRole('dialog', { name: 'Stash changes' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.overlay')).toHaveCount(0)
+    await expect(stash).toBeFocused()
+
+    expect(await closing()).toEqual(['settings-dialog', 'stash-dialog'])
+  } finally {
+    await close()
+  }
+})

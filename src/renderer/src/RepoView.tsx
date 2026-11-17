@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence } from 'motion/react'
 import type { Commit, CommitBuild, CommitSearchMode, GraphFilter, RebaseAction, RebaseStep, HostInfo, PullRequest, RepoInfo, RepoRefs, RepoStatus, UndoInfo } from '@shared/types'
 import { CreatePrDialog } from './components/CreatePrDialog'
 import { Loading } from './components/Spinner'
@@ -1021,42 +1022,48 @@ export function RepoView({
           {refs && !commits.length ? <div className="center">No commits yet</div> : <Loading />}
         </div>
       )}
-      {rebasing && (
-        <RebaseDialog
-          repoPath={path}
-          base={rebasing.base}
-          preset={rebasing.preset}
-          onStart={(steps) => startRebase(rebasing.base, steps)}
-          onClose={() => setRebasing(null)}
-        />
-      )}
-      {stashing && (
-        <StashDialog
-          paths={stashing.paths}
-          onClose={() => setStashing(null)}
-          onStash={(options) => {
-            setStashing(null)
-            const n = options.paths?.length ?? 0
-            run('Stashing', () => window.git.stashPush(path, options), n ? `Stashed ${n === 1 ? options.paths![0] : `${n} files`}` : 'Stashed changes')
-          }}
-        />
-      )}
-      {creatingPr && host && refs && (
-        <CreatePrDialog
-          repoPath={path}
-          host={host}
-          refs={refs}
-          source={creatingPr}
-          defaultTitle={commits.find((c) => c.refs.some((r) => r.kind === 'head'))?.subject ?? ''}
-          onCreated={(pr) => {
-            setCreatingPr(false)
-            shell.showInfo(`Created ${host.kind === 'gitlab' ? 'merge' : 'pull'} request ${host.kind === 'github' ? '#' : '!'}${pr.id}`)
-            setPrs((list) => [pr, ...list])
-            setSelectedPr(pr)
-          }}
-          onClose={() => setCreatingPr(false)}
-        />
-      )}
+      <AnimatePresence>
+        {rebasing && (
+          <RebaseDialog
+            repoPath={path}
+            base={rebasing.base}
+            preset={rebasing.preset}
+            onStart={(steps) => startRebase(rebasing.base, steps)}
+            onClose={() => setRebasing(null)}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {stashing && (
+          <StashDialog
+            paths={stashing.paths}
+            onClose={() => setStashing(null)}
+            onStash={(options) => {
+              setStashing(null)
+              const n = options.paths?.length ?? 0
+              run('Stashing', () => window.git.stashPush(path, options), n ? `Stashed ${n === 1 ? options.paths![0] : `${n} files`}` : 'Stashed changes')
+            }}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {creatingPr && host && refs && (
+          <CreatePrDialog
+            repoPath={path}
+            host={host}
+            refs={refs}
+            source={creatingPr}
+            defaultTitle={commits.find((c) => c.refs.some((r) => r.kind === 'head'))?.subject ?? ''}
+            onCreated={(pr) => {
+              setCreatingPr(false)
+              shell.showInfo(`Created ${host.kind === 'gitlab' ? 'merge' : 'pull'} request ${host.kind === 'github' ? '#' : '!'}${pr.id}`)
+              setPrs((list) => [pr, ...list])
+              setSelectedPr(pr)
+            }}
+            onClose={() => setCreatingPr(false)}
+          />
+        )}
+      </AnimatePresence>
       <div className="statusbar">
         {refs && <SyncStatus refs={refs} fetchedAt={fetchedAt} fetching={backgroundFetching} busy={!!busy} onFetch={actions.fetch} />}
         <span>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { AnimatePresence } from 'motion/react'
 import type { Shell } from '../actions'
 import type { MenuItem } from './ContextMenu'
 import type { Tab, TabGroup } from '../tabs'
@@ -520,14 +521,16 @@ export function TabBar({
           </div>
         </div>
       )}
-      {colorGroup && (
-        <GroupColorDialog
-          key={colorGroup.id}
-          group={colorGroup}
-          onClose={() => setColorGroupId(null)}
-          onApply={(color) => onUpdateGroup(colorGroup.id, { color })}
-        />
-      )}
+      <AnimatePresence>
+        {colorGroup && (
+          <GroupColorDialog
+            key={colorGroup.id}
+            group={colorGroup}
+            onClose={() => setColorGroupId(null)}
+            onApply={(color) => onUpdateGroup(colorGroup.id, { color })}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

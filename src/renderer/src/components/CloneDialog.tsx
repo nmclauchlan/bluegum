@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useIsPresent } from 'motion/react'
+import { Overlay } from './Overlay'
 import { Loading } from './Spinner'
 import type { HostAccount, HostRepo } from '@shared/types'
 import { errorMessage, formatDate, hostName } from '../util'
@@ -73,13 +75,15 @@ export function CloneDialog({
       .catch((e) => setRepos((r) => ({ ...r, [accountKey]: errorMessage(e) })))
   }, [source, accountKey, repos])
 
+  const present = useIsPresent()
   useEffect(() => {
+    if (!present) return
     const key = (e: KeyboardEvent): void => {
       if (e.key === 'Escape' && !busy) onClose()
     }
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)
-  }, [onClose, busy])
+  }, [onClose, busy, present])
 
   const current = source.kind === 'account' ? repos[accountKey] : undefined
   const filtered = useMemo(() => {
@@ -120,7 +124,7 @@ export function CloneDialog({
   }
 
   return (
-    <div className="overlay" onMouseDown={() => !busy && onClose()}>
+    <Overlay onDismiss={() => !busy && onClose()}>
       <div className="dialog clone-dialog" onMouseDown={(e) => e.stopPropagation()}>
         <div className="settings-head">
           <h3>Clone repository</h3>
@@ -242,6 +246,6 @@ export function CloneDialog({
           </button>
         </div>
       </div>
-    </div>
+    </Overlay>
   )
 }

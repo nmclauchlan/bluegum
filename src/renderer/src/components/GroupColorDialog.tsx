@@ -1,4 +1,6 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type FormEvent } from 'react'
+import { useIsPresent } from 'motion/react'
+import { Overlay } from './Overlay'
 import { createPortal } from 'react-dom'
 import type { TabGroup } from '../tabs'
 import { GROUP_COLOR_PALETTES, normalizeGroupColor, paletteFromColorHuntUrl } from '../tabColors'
@@ -28,7 +30,9 @@ export function GroupColorDialog({
   close.current = onClose
   const color = normalizeGroupColor(hex)
 
+  const present = useIsPresent()
   useEffect(() => {
+    if (!present) return
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const focusable = (): HTMLElement[] => Array.from(
       dialog.current?.querySelectorAll<HTMLElement>(
@@ -73,7 +77,7 @@ export function GroupColorDialog({
       document.removeEventListener('focusin', containFocus)
       if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true })
     }
-  }, [])
+  }, [present])
 
   const chooseColor = (value: string): void => {
     const normalized = normalizeGroupColor(value)
@@ -136,12 +140,7 @@ export function GroupColorDialog({
   )
 
   return createPortal(
-    <div
-      className="overlay group-color-overlay"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose()
-      }}
-    >
+    <Overlay className="group-color-overlay" onDismiss={(event) => event.target === event.currentTarget && onClose()}>
       <form
         className="dialog group-color-dialog"
         ref={dialog}
@@ -262,7 +261,7 @@ export function GroupColorDialog({
           <button className="primary" type="submit" disabled={!color}>Apply color</button>
         </footer>
       </form>
-    </div>,
+    </Overlay>,
     document.body
   )
 }

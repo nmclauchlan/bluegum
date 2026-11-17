@@ -942,22 +942,26 @@ export default function App(): React.JSX.Element {
           />
         )}
         <ContextMenu menu={menu} onClose={closeMenu} />
-        {cloneOpen && (
-          <CloneDialog
-            onClose={() => setCloneOpen(false)}
-            onOpenSettings={() => {
-              setCloneOpen(false)
-              setSettingsOpen({})
-            }}
-            onCloned={async (dest) => {
-              const group = cloneOpen.group
-              setCloneOpen(false)
-              await openPath(dest, true, group)
-              showInfo(`Cloned into ${dest}`)
-            }}
-          />
-        )}
-        {settingsOpen && <SettingsDialog suggestBaseUrl={settingsOpen.suggestBaseUrl} onClose={() => setSettingsOpen(false)} />}
+        <AnimatePresence>
+          {cloneOpen && (
+            <CloneDialog
+              onClose={() => setCloneOpen(false)}
+              onOpenSettings={() => {
+                setCloneOpen(false)
+                setSettingsOpen({})
+              }}
+              onCloned={async (dest) => {
+                const group = cloneOpen.group
+                setCloneOpen(false)
+                await openPath(dest, true, group)
+                showInfo(`Cloned into ${dest}`)
+              }}
+            />
+          )}
+        </AnimatePresence>
+        <AnimatePresence>
+          {settingsOpen && <SettingsDialog suggestBaseUrl={settingsOpen.suggestBaseUrl} onClose={() => setSettingsOpen(false)} />}
+        </AnimatePresence>
         {dialogs.element}
         {toast && <Toast key={toast.id} toast={toast} onClose={closeToast} />}
       </div>

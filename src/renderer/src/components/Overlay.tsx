@@ -1,6 +1,6 @@
 import { motion, useIsPresent } from 'motion/react'
 
-export function Overlay({ className, onDismiss, children }: { className?: string; onDismiss: () => void; children: React.ReactNode }): React.JSX.Element {
+export function Overlay({ className, onDismiss, children }: { className?: string; onDismiss: (event: React.MouseEvent<HTMLDivElement>) => void; children: React.ReactNode }): React.JSX.Element {
   const present = useIsPresent()
   return (
     <motion.div

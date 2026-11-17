@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { useIsPresent } from 'motion/react'
+import { Overlay } from './Overlay'
 import type { RebaseAction, RebaseCommit, RebaseStep } from '@shared/types'
 import { Loading } from './Spinner'
 import { errorMessage, shortHash } from '../util'
@@ -60,13 +62,15 @@ export function RebaseDialog({
     focusRef.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus()
   }, [loaded])
 
+  const present = useIsPresent()
   useEffect(() => {
+    if (!present) return
     const key = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)
-  }, [onClose])
+  }, [onClose, present])
 
   const update = (i: number, patch: Partial<Row>): void => setRows((r) => r && r.map((row, j) => (j === i ? { ...row, ...patch } : row)))
   const move = (from: number, to: number): void =>
@@ -96,7 +100,7 @@ export function RebaseDialog({
     (rows ?? []).map((r) => ({ hash: r.hash, action: r.action, message: r.action === 'reword' ? r.draft.trim() : undefined }))
 
   return (
-    <div className="overlay" onMouseDown={onClose}>
+    <Overlay onDismiss={onClose}>
       <div className="dialog rebase-dialog" role="dialog" aria-label="Interactive rebase" onMouseDown={(e) => e.stopPropagation()}>
         <h3>Interactive rebase</h3>
         <p className="muted">
@@ -178,6 +182,6 @@ export function RebaseDialog({
           </button>
         </div>
       </div>
-    </div>
+    </Overlay>
   )
 }

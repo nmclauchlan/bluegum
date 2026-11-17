@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { useIsPresent } from 'motion/react'
+import { Overlay } from './Overlay'
 import type { HostInfo, PullRequest, RepoRefs } from '@shared/types'
 import { errorMessage, hostPath, prNoun } from '../util'
 
@@ -32,13 +34,15 @@ export function CreatePrDialog({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const present = useIsPresent()
   useEffect(() => {
+    if (!present) return
     const key = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)
-  }, [onClose])
+  }, [onClose, present])
 
   const targets = [...new Set(refs.remotes.map((r) => r.name))].filter((n) => n !== source).sort()
 
@@ -56,7 +60,7 @@ export function CreatePrDialog({
   }
 
   return (
-    <div className="overlay" onMouseDown={onClose}>
+    <Overlay onDismiss={onClose}>
       <div className="dialog pr-dialog" onMouseDown={(e) => e.stopPropagation()}>
         <h3>New {prNoun(host.kind)}</h3>
         <p className="muted">{hostPath(host)}</p>
@@ -90,6 +94,6 @@ export function CreatePrDialog({
           </button>
         </div>
       </div>
-    </div>
+    </Overlay>
   )
 }
