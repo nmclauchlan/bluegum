@@ -120,6 +120,7 @@ When a merge, cherry-pick, revert or rebase stops on conflicts, a banner shows t
 - **Undo and redo** (Ctrl+Z and Ctrl+Shift+Z) reverse commits, amends, checkouts, branch creation and deletion, resets, merges, pulls, cherry-picks and reverts. Blue Gum checks the repository hasn't moved on before reversing anything, and never discards uncommitted work.
 - **Confirmation first.** Resets, discards, and deleting branches, tags or stashes ask before they run.
 - **No surprises.** Merges that hit conflicts stop and show the conflicts, and pulls from notifications only ever fast-forward.
+- **Deleted upstreams.** If a branch's remote copy was deleted, for example after its pull request merged, Pull explains what happened instead of failing. When the work is already in the main branch (squash merges included), Blue Gum offers to switch to main and delete the old branch. Otherwise it offers to push the branch back or stop tracking it. The status bar flags a deleted upstream too; click it for the same choices.
 
 ### Make it yours
 
