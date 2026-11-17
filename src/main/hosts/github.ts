@@ -6,7 +6,7 @@ export function parseGithubRemote(remote: string, knownHosts: string[]): HostInf
     const esc = host.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const patterns = [
       new RegExp(`^https?://(?:[^@/]+@)?${esc}/([^/]+)/([^/]+?)(?:\\.git)?/?$`, 'i'),
-      new RegExp(`^(?:ssh://)?git@${esc}[:/]([^/]+)/([^/]+?)(?:\\.git)?/?$`, 'i')
+      new RegExp(`^(?:ssh://)?git@${esc}(?::\\d+)?[:/]([^/]+)/([^/]+?)(?:\\.git)?/?$`, 'i')
     ]
     for (const re of patterns) {
       const m = re.exec(remote)

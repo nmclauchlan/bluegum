@@ -109,3 +109,46 @@ test('a GitHub CLI sign-in is offered alongside the git one and stays linked to 
     await close()
   }
 })
+
+test('self-hosted GitHub Enterprise and GitLab remotes are recognised before any account exists', async () => {
+  const repo = initRepo(tempDir())
+  commit(repo, 'a.txt', 'a\n', 'First')
+  const { app, page, close } = await launch(repo, undefined, isolatedGit())
+  try {
+    await app.evaluate(() => {
+      globalThis.fetch = (async (input: unknown) => {
+        const url = String(input)
+        if (url === 'https://git.acme.test/api/v3/meta') return Response.json({}, { headers: { 'x-github-enterprise-version': '3.14.0' } })
+        if (url === 'https://code.acme.test/api/v4/version') return Response.json({ message: '401 Unauthorized' }, { status: 401, headers: { 'x-gitlab-meta': '{}' } })
+        return new Response('Not found', { status: 404 })
+      }) as typeof fetch
+    })
+    const v = view(page)
+    const recheck = (): Promise<void> => page.evaluate(() => window.dispatchEvent(new Event('bluegum:accounts-changed')))
+    const dialog = page.getByRole('dialog', { name: 'Connect an account' })
+
+    git(repo, 'remote', 'add', 'origin', 'https://git.acme.test/acme/widgets.git')
+    await recheck()
+    await v.getByRole('button', { name: 'Connect to GitHub' }).click()
+    await expect(dialog.getByRole('radio', { name: 'GitHub' })).toHaveAttribute('aria-checked', 'true')
+    await expect(dialog.getByRole('textbox', { name: 'Server' })).toHaveValue('https://git.acme.test')
+    await dialog.locator('summary', { hasText: 'Use a personal access token' }).click()
+    await expect(dialog.getByRole('link', { name: 'Create a token on GitHub' })).toHaveAttribute(
+      'href',
+      'https://git.acme.test/settings/tokens/new?scopes=repo,read:org&description=Blue%20Gum'
+    )
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    await expect(dialog).toHaveCount(0)
+
+    git(repo, 'remote', 'set-url', 'origin', 'git@code.acme.test:platform/tools/widgets.git')
+    await recheck()
+    await expect(v.getByRole('button', { name: 'Connect to GitLab' })).toBeVisible()
+    await expect(v.locator('.connect-row')).toContainText('platform/tools/widgets')
+
+    git(repo, 'remote', 'set-url', 'origin', 'https://git.other.test/x/y.git')
+    await recheck()
+    await expect(v.locator('.connect-row')).toHaveCount(0)
+  } finally {
+    await close()
+  }
+})

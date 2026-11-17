@@ -56,9 +56,51 @@ export function parseRemote(remote: string): HostInfo | null {
   )
 }
 
+const PROBE_MS = 5000
+const HOSTNAME = /^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?$/i
+const PUBLIC_HOST = /(^|\.)(github\.com|gitlab\.com|azure\.com|visualstudio\.com)$/i
+const kinds = new Map<string, HostKind | null>()
+
+export function remoteHost(remote: string): string | null {
+  const m =
+    /^https:\/\/(?:[^@/]+@)?([^/]+)\//i.exec(remote) ?? /^ssh:\/\/(?:[^@/]+@)?([^/:]+)(?::\d+)?\//i.exec(remote) ?? /^[^@/:\s]+@([^/:]+):/.exec(remote)
+  const host = m?.[1].toLowerCase()
+  return host && HOSTNAME.test(host) && !PUBLIC_HOST.test(host.replace(/:\d+$/, '')) ? host : null
+}
+
+async function probe(host: string): Promise<HostKind | null | undefined> {
+  const get = (path: string): Promise<Response | null> =>
+    fetch(`https://${host}${path}`, { signal: AbortSignal.timeout(PROBE_MS), redirect: 'manual' }).catch(() => null)
+  const [gh, gl] = await Promise.all([get('/api/v3/meta'), get('/api/v4/version')])
+  if (!gh && !gl) return undefined
+  if (gh?.headers.has('x-github-enterprise-version') || gh?.headers.has('x-github-request-id')) return 'github'
+  if (gl?.headers.has('x-gitlab-meta')) return 'gitlab'
+  if (gl?.status === 401 && ((await gl.json().catch(() => null)) as { message?: string } | null)?.message === '401 Unauthorized') return 'gitlab'
+  return null
+}
+
+async function hostKind(host: string): Promise<HostKind | null> {
+  if (kinds.has(host)) return kinds.get(host)!
+  const guess: HostKind | null = /gitlab/i.test(host) ? 'gitlab' : /github/i.test(host) ? 'github' : null
+  const probed = await probe(host)
+  if (probed === undefined) return guess
+  const kind = probed ?? guess
+  kinds.set(host, kind)
+  return kind
+}
+
+async function selfHostedRemote(remote: string): Promise<HostInfo | null> {
+  const host = remoteHost(remote)
+  if (!host) return null
+  const kind = await hostKind(host)
+  if (kind === 'github') return github.parseGithubRemote(remote, [host])
+  if (kind === 'gitlab') return gitlab.parseGitlabRemote(remote, [host])
+  return null
+}
+
 export async function detect(repoPath: string): Promise<HostInfo | null> {
   const remote = await remoteUrl(repoPath)
-  const info = remote ? parseRemote(remote) : null
+  const info = remote ? (parseRemote(remote) ?? (await selfHostedRemote(remote))) : null
   detected.set(repoPath, info)
   return info
 }

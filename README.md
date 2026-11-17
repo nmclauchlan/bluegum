@@ -193,7 +193,7 @@ If none of those are set up, use a personal access token. **Create a token** ope
 | GitHub and GitHub Enterprise Server | `https://github.com` or `https://github.your-company.com` | Repositories, pull requests, checks and commit statuses |
 | GitLab and self-managed GitLab | `https://gitlab.com` or `https://gitlab.your-company.com` | The `api` scope |
 
-Blue Gum matches each repository to an account through its `origin` remote. If a token can't read build results, the commit panel says which scope to add rather than failing quietly.
+Blue Gum matches each repository to an account through its `origin` remote. Repositories on your own GitHub Enterprise Server or GitLab server are recognised from the remote too, so they offer **Connect** before any account for that server exists. If a token can't read build results, the commit panel says which scope to add rather than failing quietly.
 
 ## Security and privacy
 
